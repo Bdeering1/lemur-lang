@@ -1,11 +1,11 @@
 package lexer
 
-import "monkey/token"
+import ("fmt"; "monkey/token")
 
 type Lexer struct {
     input   string
     pos     int
-    readPos int // is this needed?
+    nextPos int
     ch      byte
 }
 
@@ -15,32 +15,95 @@ func New(input string) *Lexer {
     return l
 }
 
-func (l *Lexer) NextToken() token.Token {
-    var tok token.Token
+func (l *Lexer) NextToken() (tok token.Token) {
+    l.skipWhitespace()
+    tok.Literal = string(l.ch)
 
     switch l.ch {
-        case '=': tok.Type = token.Assign
-        case '+': tok.Type = token.Plus
-        case ',': tok.Type = token.Comma
-        case ';': tok.Type = token.Semicolon
-        case '(': tok.Type = token.LParen
-        case ')': tok.Type = token.RParen
-        case '{': tok.Type = token.LBrace
-        case '}': tok.Type = token.RBrace
-        case 0:   tok.Type = token.EOF
+    case '\x00': tok.Type = token.EOF
+    case ',': tok.Type = token.Comma
+    case ';': tok.Type = token.Semicolon
+    case '(': tok.Type = token.LParen
+    case ')': tok.Type = token.RParen
+    case '{': tok.Type = token.LBrace
+    case '}': tok.Type = token.RBrace
+    case '=', '+', '-', '!', '*', '/', '<', '>': // checking individually would be more performant
+        tok.Literal = l.readOperator()
+        tok.Type = token.OperatorType(tok.Literal)
+    default:
+        if isAlpha(l.ch) {
+            tok.Literal = l.readIdent()
+            tok.Type = token.IdentType(tok.Literal)
+            return tok
+        } else if isDigit(l.ch) {
+            tok.Literal = l.readNumber()
+            tok.Type = token.Int
+            return tok
+        }
+        tok.Type = token.Illegal
     }
-    if l.ch == 0 { tok.Literal = "" } else { tok.Literal = string(l.ch) }
 
     l.readChar()
     return tok
 }
 
-func (l *Lexer) readChar() {
-    if l.readPos >= len(l.input) {
-        l.ch = 0
-    } else {
-        l.ch = l.input[l.readPos]
+func (l *Lexer) readOperator() string {
+    literal := string(l.ch) + string(l.peekChar())
+    fmt.Println(literal)
+    if isOperator(literal) {
+        l.readChar()
+        return literal
     }
-    l.pos = l.readPos
-    l.readPos++
+    return string(l.ch)
+}
+
+func isOperator(op string) bool {
+    _, ok := token.Operators[op]; return ok
+}
+
+func (l *Lexer) readIdent() string {
+    pos := l.pos
+    for isAlpha(l.ch) {
+        l.readChar()
+    }
+    return l.input[pos:l.pos]
+}
+
+func isAlpha(ch byte) bool {
+    return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch == '_'
+}
+
+func (l *Lexer) readNumber() string {
+    pos := l.pos
+    for isDigit(l.ch) {
+        l.readChar()
+    }
+    return l.input[pos:l.pos]
+}
+
+func isDigit(ch byte) bool {
+    return ch >= '0' && ch <= '9'
+}
+
+func (l *Lexer) readChar() {
+    if l.nextPos >= len(l.input) {
+        l.ch = '\x00'
+    } else {
+        l.ch = l.input[l.nextPos]
+    }
+    l.pos = l.nextPos
+    l.nextPos++
+}
+
+func (l *Lexer) peekChar() byte {
+    if l.nextPos >= len(l.input) {
+        return '\x00'
+    }
+    return l.input[l.nextPos]
+}
+
+func (l *Lexer) skipWhitespace() {
+    for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+        l.readChar()
+    }
 }
