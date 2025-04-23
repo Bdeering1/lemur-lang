@@ -1,6 +1,6 @@
 package lexer
 
-import ("fmt"; "monkey/token")
+import ("lemur/token")
 
 type Lexer struct {
     input   string
@@ -49,7 +49,6 @@ func (l *Lexer) NextToken() (tok token.Token) {
 
 func (l *Lexer) readOperator() string {
     literal := string(l.ch) + string(l.peekChar())
-    fmt.Println(literal)
     if isOperator(literal) {
         l.readChar()
         return literal

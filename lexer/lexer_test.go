@@ -3,7 +3,7 @@ package lexer
 import (
     "testing"
 
-    "monkey/token"
+    "lemur/token"
 )
 
 type tToken struct {
