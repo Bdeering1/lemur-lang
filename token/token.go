@@ -59,7 +59,7 @@ var Operators = map[string]TokenType{
     "!=": NOTEQ,
 }
 
-var Keywords = map[string]TokenType{
+var Keywords = map[string]TokenType{ // can this be a bi-directional map?
     "fn": Function,
     "let": Let,
     "true": True,

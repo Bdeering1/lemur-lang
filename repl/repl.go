@@ -10,7 +10,7 @@ import (
     "lemur/token"
 )
 
-const prompt = "> "
+const prompt = "=> "
 
 func Start(in io.Reader, out io.Writer) {
     scanner := bufio.NewScanner(in)
