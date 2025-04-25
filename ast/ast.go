@@ -26,6 +26,25 @@ func (p *Program) TokenLiteral() string {
     return p.Statements[0].TokenLiteral() // why?
 }
 
+type LetStatement struct {
+    Token token.Token // token.Let (maybe only needed if the token contained line/col info)
+    Name *Identifier // isn't this the same as the identifier token?
+    Value Expression
+}
+var _ Statement = (*LetStatement)(nil)
+
+func (ls *LetStatement) stmtNode(){}
+func (ls *LetStatement) TokenLiteral() string { return ls.Token.Literal }
+
+type ReturnStatement struct {
+    Token token.Token
+    Value Expression
+}
+var _ Statement = (*ReturnStatement)(nil)
+
+func (rs *ReturnStatement) stmtNode(){}
+func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
+
 type Identifier struct {
     Token token.Token
     Value string
@@ -34,13 +53,3 @@ var _ Expression = (*Identifier)(nil)
 
 func (i *Identifier) exprNode(){}
 func (i *Identifier) TokenLiteral() string { return i.Token.Literal }
-
-type LetStatement struct {
-    Token token.Token // token.Let (maybe only needed if the token contained line/col info)
-    Name *Identifier // can this just be the token itself?
-    Value Expression
-}
-var _ Statement = (*LetStatement)(nil)
-
-func (ls *LetStatement) stmtNode(){}
-func (ls *LetStatement) TokenLiteral() string { return ls.Token.Literal }
