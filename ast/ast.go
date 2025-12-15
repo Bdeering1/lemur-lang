@@ -8,12 +8,12 @@ type Node interface {
 
 type Statement interface {
     Node
-    stmtNode() // dummy method
+    _stmtNode() // dummy method
 }
 
 type Expression interface {
     Node
-    exprNode() // dummy method
+    _exprNode() // dummy method
 }
 
 type Program struct {
@@ -33,7 +33,7 @@ type LetStatement struct {
 }
 var _ Statement = (*LetStatement)(nil)
 
-func (ls *LetStatement) stmtNode(){}
+func (ls *LetStatement) _stmtNode(){}
 func (ls *LetStatement) TokenLiteral() string { return ls.Token.Literal }
 
 type ReturnStatement struct {
@@ -42,7 +42,7 @@ type ReturnStatement struct {
 }
 var _ Statement = (*ReturnStatement)(nil)
 
-func (rs *ReturnStatement) stmtNode(){}
+func (rs *ReturnStatement) _stmtNode(){}
 func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
 
 type Identifier struct {
@@ -51,5 +51,5 @@ type Identifier struct {
 }
 var _ Expression = (*Identifier)(nil)
 
-func (i *Identifier) exprNode(){}
+func (i *Identifier) _exprNode(){}
 func (i *Identifier) TokenLiteral() string { return i.Token.Literal }

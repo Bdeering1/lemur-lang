@@ -62,7 +62,7 @@ func isOperator(op string) bool {
 
 func (l *Lexer) readIdent() string {
     pos := l.pos
-    for isAlpha(l.ch) {
+    for isAlpha(l.ch) { // support numeric characters?
         l.readChar()
     }
     return l.input[pos:l.pos]
@@ -85,13 +85,14 @@ func isDigit(ch byte) bool {
 }
 
 func (l *Lexer) readChar() {
-    if l.nextPos >= len(l.input) {
-        l.ch = '\x00'
-    } else {
-        l.ch = l.input[l.nextPos]
-    }
     l.pos = l.nextPos
     l.nextPos++
+
+    if l.pos >= len(l.input) {
+        l.ch = '\x00'
+        return
+    }
+    l.ch = l.input[l.pos]
 }
 
 func (l *Lexer) peekChar() byte {

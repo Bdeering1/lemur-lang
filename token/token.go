@@ -1,6 +1,6 @@
 package token
 
-type TokenType string // could make this int or byte
+type TokenType string // could make this an enum
 
 type Token struct {
     Type TokenType
