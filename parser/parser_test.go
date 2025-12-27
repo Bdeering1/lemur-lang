@@ -36,7 +36,7 @@ func TestLetStatement(t *testing.T) {
     }
     for i, tt := range tests {
         stmt := program.Statements[i]
-        if !testLetStatement(t, stmt, tt.expIdentifier) { return }
+        testLetStatement(t, stmt, tt.expIdentifier)
     }
 }
 
@@ -61,15 +61,7 @@ func TestReturnStatement(t *testing.T) {
     }
 
     for _, stmt := range program.Statements {
-        returnStmt, ok := stmt.(*ast.ReturnStatement)
-        if !ok {
-            t.Errorf("s is not *ast.ReturnStatement (got %T)", stmt)
-            continue
-        }
-        if returnStmt.TokenLiteral() != "return" {
-            t.Errorf("s.TokenLiteral not 'return' (got '%s')", returnStmt.TokenLiteral())
-            continue
-        }
+        testReturnStatement(t, stmt)
     }
 }
 
@@ -84,27 +76,35 @@ func checkErrors(t *testing.T, p *Parser) {
     t.FailNow()
 }
 
-func testLetStatement(t *testing.T, s ast.Statement, expName string) bool { // is this needed?
+func testLetStatement(t *testing.T, s ast.Statement, expName string) {
     if s.TokenLiteral() != "let" {
         t.Errorf("s.TokenLiteral not 'let' (got '%s')", s)
-        return false
+        return
     }
 
     letStmt, ok := s.(*ast.LetStatement)
     if !ok {
         t.Errorf("s is not *ast.LetStatement (got %T)", s)
-        return false
+        return
     }
     if letStmt.Name.Value != expName {
         t.Errorf("letStmt.Name.Value is not '%s' (got '%s')",
             expName, letStmt.Name.Value)
-        return false
+        return
     }
     if letStmt.Name.TokenLiteral() != expName {
         t.Errorf("letStmt.Name.TokenLiteral is not '%s' (got '%s')",
             expName, letStmt.Name.TokenLiteral())
-        return false
     }
+}
 
-    return true
+func testReturnStatement(t *testing.T, s ast.Statement) {
+    returnStmt, ok := s.(*ast.ReturnStatement)
+    if !ok {
+        t.Errorf("s is not *ast.ReturnStatement (got %T)", s)
+        return
+    }
+    if returnStmt.TokenLiteral() != "return" {
+        t.Errorf("s.TokenLiteral not 'return' (got '%s')", returnStmt.TokenLiteral())
+    }
 }

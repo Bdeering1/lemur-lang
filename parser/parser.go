@@ -73,7 +73,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
         return nil
     }
 
-    for p.curToken.Type != token.Semicolon { p.readToken() } // todo: parse expression here
+    for !p.curTokenIs(token.Semicolon) { p.readToken() } // todo: parse expression here
 
     return stmt
 }

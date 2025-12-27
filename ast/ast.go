@@ -27,7 +27,7 @@ func (p *Program) TokenLiteral() string {
 }
 
 type LetStatement struct {
-    Token token.Token // token.Let (maybe only needed if the token contained line/col info)
+    Token token.Token
     Name *Identifier // isn't this the same as the identifier token?
     Value Expression
 }
@@ -49,7 +49,7 @@ type Identifier struct {
     Token token.Token
     Value string
 }
-var _ Expression = (*Identifier)(nil)
+var _ Expression = (*Identifier)(nil) // since identifiers can be used in expressions
 
 func (i *Identifier) _exprNode(){}
 func (i *Identifier) TokenLiteral() string { return i.Token.Literal }
