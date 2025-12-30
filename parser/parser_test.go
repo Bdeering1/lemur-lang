@@ -1,6 +1,7 @@
 package parser
 
 import (
+    "fmt"
     "testing"
 
     "lemur/ast"
@@ -126,20 +127,49 @@ func TestIntegerLiteralExpression(t *testing.T) {
             program.Statements[0])
     }
 
-    literal, ok := stmt.Value.(*ast.IntegerLiteral)
-    if !ok {
-        t.Fatalf("expression is not an ast.IntegerLiteral (got %T)",
-            program.Statements[0])
+    testIntegerLiteral(t, stmt.Value, 5)
+}
+
+func TestPrefixExpression(t *testing.T) {
+    prefixTests := []struct{
+        input    string
+        operator string
+        intValue int64
+    }{
+        {"!5;", "!", 5},
+        {"-15;", "-", 15},
     }
-    if literal.Value != 5 {
-        t.Errorf("ident.Value is not %d (got %d)",
-            5,
-            literal.Value)
-    }
-    if literal.TokenLiteral() != "5" {
-        t.Errorf("ident.TokenLiteral not %s (got %s)",
-            "5",
-            literal.TokenLiteral())
+
+    for _, pt := range prefixTests {
+        l := lexer.New(pt.input)
+        p := New(l)
+
+        program := p.ParseProgram()
+        checkErrors(t, p)
+
+        if len(program.Statements) != 1 {
+            t.Fatalf("program.Statements does not contain 1 entry (got %d)",
+                len(program.Statements))
+        }
+
+        stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+        if !ok {
+            t.Fatalf("program.Statements[0] is not an ast.ExpressionStatement (got %T)",
+                program.Statements[0])
+        }
+
+        exp, ok := stmt.Value.(*ast.PrefixExpression)
+        if !ok {
+            t.Fatalf("expression is not an ast.PrefixExpression (got %T)",
+                program.Statements[0])
+        }
+        if exp.Operator != pt.operator {
+            t.Errorf("expression operator is not '%s' (got %s)",
+                pt.operator,
+                exp.Operator)
+        }
+
+        testIntegerLiteral(t, exp.Right, pt.intValue)
     }
 }
 
@@ -184,5 +214,22 @@ func testReturnStatement(t *testing.T, s ast.Statement) {
     }
     if returnStmt.TokenLiteral() != "return" {
         t.Errorf("s.TokenLiteral not 'return' (got '%s')", returnStmt.TokenLiteral())
+    }
+}
+
+func testIntegerLiteral(t *testing.T, il ast.Expression, val int64) {
+    i, ok := il.(*ast.IntegerLiteral)
+    if !ok {
+        t.Errorf("il is not an *ast.IntegerLiteral (got %T)", il)
+        return
+    }
+
+    if i.Value != val {
+        t.Errorf("i.Value is not %d (got %d)", val, i.Value)
+        return
+    }
+
+    if i.TokenLiteral() != fmt.Sprintf("%d", val) {
+        t.Errorf("i.TokenLiteral is not %d (got %s)", val, i.TokenLiteral())
     }
 }

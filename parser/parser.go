@@ -54,6 +54,8 @@ func New(l *lexer.Lexer) *Parser {
     p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
     p.registerPrefix(token.Ident, p.parseIdentifier)
     p.registerPrefix(token.Int, p.parseIntegerLiteral)
+    p.registerPrefix(token.Bang, p.parsePrefixExpression)
+    p.registerPrefix(token.Minus, p.parsePrefixExpression)
 
     return p
 }
@@ -79,6 +81,11 @@ func (p *Parser) Errors() []string {
 
 func (p *Parser) peekError(tt token.TokenType) {
     msg := fmt.Sprintf("expected %s, got %s", tt, p.nextToken.Type)
+    p.errors = append(p.errors, msg)
+}
+
+func (p *Parser) noPrefixParseFnError(tt token.TokenType) {
+    msg := fmt.Sprintf("no prefix parse function found for '%s'", tt)
     p.errors = append(p.errors, msg)
 }
 
@@ -133,6 +140,7 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 func (p *Parser) parseExpression(precedence int) ast.Expression {
     prefix := p.prefixParseFns[p.curToken.Type]
     if prefix == nil {
+        p.noPrefixParseFnError(p.curToken.Type)
         return nil
     }
     leftExp := prefix()
@@ -156,6 +164,18 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
     l.Value = value
 
     return l
+}
+
+func (p *Parser) parsePrefixExpression() ast.Expression {
+    exp := &ast.PrefixExpression{
+        Token:    p.curToken,
+        Operator: p.curToken.Literal,
+    }
+
+    p.readToken()
+    exp.Right = p.parseExpression(Prefix)
+
+    return exp
 }
 
 func (p *Parser) readToken() {
