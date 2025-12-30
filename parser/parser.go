@@ -2,10 +2,27 @@ package parser
 
 import (
     "fmt"
+    "strconv"
 
     "lemur/ast"
     "lemur/lexer"
     "lemur/token"
+)
+
+const (
+    _ int = iota
+    Lowest
+    Equals
+    LessGreater
+    Sum
+    Product
+    Prefix
+    Call
+)
+
+type (
+    prefixParseFn func() ast.Expression
+    infixParseFn func(ast.Expression) ast.Expression
 )
 
 type Parser struct {
@@ -14,6 +31,16 @@ type Parser struct {
     errors []string
     curToken  token.Token
     nextToken token.Token
+
+    prefixParseFns map[token.TokenType]prefixParseFn
+    infixParseFns map[token.TokenType]infixParseFn
+}
+
+func (p *Parser) registerPrefix(tt token.TokenType, f prefixParseFn) {
+    p.prefixParseFns[tt] = f
+}
+func (p *Parser) registerInfix(tt token.TokenType, f infixParseFn) {
+    p.infixParseFns[tt] = f
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -23,6 +50,10 @@ func New(l *lexer.Lexer) *Parser {
     }
     p.readToken()
     p.readToken()
+
+    p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
+    p.registerPrefix(token.Ident, p.parseIdentifier)
+    p.registerPrefix(token.Int, p.parseIntegerLiteral)
 
     return p
 }
@@ -58,7 +89,7 @@ func (p *Parser) parseStatement() ast.Statement {
     case token.Return:
         return p.parseReturnStatement()
     default:
-        return nil
+        return p.parseExpressionStatement()
     }
 }
 
@@ -85,6 +116,46 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
     for !p.curTokenIs(token.Semicolon) { p.readToken() }
 
     return stmt
+}
+
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+    stmt := &ast.ExpressionStatement{Token: p.curToken}
+
+    stmt.Value = p.parseExpression(Lowest)
+
+    if p.nextTokenIs(token.Semicolon) {
+        p.readToken()
+    }
+
+    return stmt
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+    prefix := p.prefixParseFns[p.curToken.Type]
+    if prefix == nil {
+        return nil
+    }
+    leftExp := prefix()
+
+    return leftExp
+}
+
+func (p *Parser) parseIdentifier() ast.Expression {
+    return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+    l := &ast.IntegerLiteral{Token: p.curToken}
+
+    value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
+    if err != nil {
+        msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
+        p.errors = append(p.errors, msg)
+        return nil
+    }
+    l.Value = value
+
+    return l
 }
 
 func (p *Parser) readToken() {

@@ -65,6 +65,84 @@ func TestReturnStatement(t *testing.T) {
     }
 }
 
+func TestIdentifierExpression(t *testing.T) {
+    input := "foobar;"
+
+    l := lexer.New(input)
+    p := New(l)
+
+    program := p.ParseProgram()
+    checkErrors(t, p)
+    if program == nil {
+        t.Fatalf("ParseProgram() returned nil")
+    }
+    if len(program.Statements) != 1 {
+        t.Fatalf("program.Statements does not contain 1 entry (got %d)",
+            len(program.Statements))
+    }
+
+    stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+    if !ok {
+        t.Fatalf("program.Statements[0] is not an ast.ExpressionStatement (got %T)",
+            program.Statements[0])
+    }
+
+    ident, ok := stmt.Value.(*ast.Identifier)
+    if !ok {
+        t.Fatalf("expression is not an ast.Identifier (got %T)",
+            program.Statements[0])
+    }
+    if ident.Value != "foobar" {
+        t.Errorf("ident.Value is not %s (got %s)",
+            "foobar",
+            ident.Value)
+    }
+    if ident.TokenLiteral() != "foobar" {
+        t.Errorf("ident.TokenLiteral not %s (got %s)",
+            "foobar",
+            ident.TokenLiteral())
+    }
+}
+
+func TestIntegerLiteralExpression(t *testing.T) {
+    input := "5;"
+
+    l := lexer.New(input)
+    p := New(l)
+
+    program := p.ParseProgram()
+    checkErrors(t, p)
+    if program == nil {
+        t.Fatalf("ParseProgram() returned nil")
+    }
+    if len(program.Statements) != 1 {
+        t.Fatalf("program.Statements does not contain 1 entry (got %d)",
+            len(program.Statements))
+    }
+
+    stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+    if !ok {
+        t.Fatalf("program.Statements[0] is not an ast.ExpressionStatement (got %T)",
+            program.Statements[0])
+    }
+
+    literal, ok := stmt.Value.(*ast.IntegerLiteral)
+    if !ok {
+        t.Fatalf("expression is not an ast.IntegerLiteral (got %T)",
+            program.Statements[0])
+    }
+    if literal.Value != 5 {
+        t.Errorf("ident.Value is not %d (got %d)",
+            5,
+            literal.Value)
+    }
+    if literal.TokenLiteral() != "5" {
+        t.Errorf("ident.TokenLiteral not %s (got %s)",
+            "5",
+            literal.TokenLiteral())
+    }
+}
+
 func checkErrors(t *testing.T, p *Parser) {
     errors := p.Errors()
     if len(errors) == 0  { return }

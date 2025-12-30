@@ -110,8 +110,18 @@ type Identifier struct {
     Token token.Token
     Value string
 }
-var _ Expression = (*Identifier)(nil) // since identifiers can be used in expressions
+var _ Expression = (*Identifier)(nil)
 
 func (i *Identifier) _exprNode(){}
 func (i *Identifier) TokenLiteral() string { return i.Token.Literal }
 func (i *Identifier) String() string { return i.Value }
+
+type IntegerLiteral struct {
+    Token token.Token
+    Value int64
+}
+var _ Expression = (*IntegerLiteral)(nil)
+
+func (il *IntegerLiteral) _exprNode(){}
+func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
+func (il *IntegerLiteral) String() string { return il.Token.Literal }
