@@ -33,8 +33,8 @@ const (
 
     LT       = "<"
     GT       = ">"
-    EQ       = "=="
-    NOTEQ    = "!="
+    Eq       = "=="
+    NotEq    = "!="
 
     // Keywords
     Function = "Function"
@@ -55,8 +55,8 @@ var Operators = map[string]TokenType{
     "/":  Slash,
     "<":  LT,
     ">":  GT,
-    "==": EQ,
-    "!=": NOTEQ,
+    "==": Eq,
+    "!=": NotEq,
 }
 
 var Keywords = map[string]TokenType{ // can this be a bi-directional map?

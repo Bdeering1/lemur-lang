@@ -35,9 +35,9 @@ func TestLetStatement(t *testing.T) {
         {"y"},
         {"foobar"},
     }
-    for i, tt := range tests {
+    for i, tst := range tests {
         stmt := program.Statements[i]
-        testLetStatement(t, stmt, tt.expIdentifier)
+        testLetStatement(t, stmt, tst.expIdentifier)
     }
 }
 
@@ -170,6 +170,90 @@ func TestPrefixExpression(t *testing.T) {
         }
 
         testIntegerLiteral(t, exp.Right, pt.intValue)
+    }
+}
+
+func TestInfixExpression(t *testing.T) {
+    infixTests := []struct{
+        input    string
+        leftVal  int64
+        operator string
+        rightVal int64
+    }{
+        {"5 + 5;", 5, "+", 5},
+        {"5 - 5;", 5, "-", 5},
+        {"5 * 5;", 5, "*", 5},
+        {"5 / 5;", 5, "/", 5},
+        {"5 > 5;", 5, ">", 5},
+        {"5 < 5;", 5, "<", 5},
+        {"5 == 5;", 5, "==", 5},
+        {"5 != 5;", 5, "!=", 5},
+    }
+
+    for _, it := range infixTests {
+        l := lexer.New(it.input)
+        p := New(l)
+
+        program := p.ParseProgram()
+        checkErrors(t, p)
+
+        if len(program.Statements) != 1 {
+            t.Fatalf("program.Statements does not contain 1 entry (got %d)",
+                len(program.Statements))
+        }
+
+        stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+        if !ok {
+            t.Fatalf("program.Statements[0] is not an ast.ExpressionStatement (got %T)",
+                program.Statements[0])
+        }
+
+        exp, ok := stmt.Value.(*ast.InfixExpression)
+        if !ok {
+            t.Fatalf("expression is not an ast.InfixExpression (got %T)",
+                program.Statements[0])
+        }
+        if exp.Operator != it.operator {
+            t.Errorf("expression operator is not '%s' (got %s)",
+                it.operator,
+                exp.Operator)
+        }
+
+        testIntegerLiteral(t, exp.Left, it.leftVal)
+        testIntegerLiteral(t, exp.Right, it.rightVal)
+    }
+}
+
+func TestOperatorPrecedenceParsing(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected string
+    }{
+        {"-a * b", "((-a) * b);"},
+        {"!-a", "(!(-a));"},
+        {"a + b + c", "((a + b) + c);"},
+        {"a + b - c", "((a + b) - c);"},
+        {"a * b * c", "((a * b) * c);"},
+        {"a * b / c", "((a * b) / c);"},
+        {"a + b / c", "(a + (b / c));"},
+        {"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f);"},
+        {"3 + 4; -5 * 5", "(3 + 4);((-5) * 5);"},
+        {"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4));"},
+        {"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4));"},
+        {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)));"},
+    }
+
+    for _, tst := range tests {
+        l := lexer.New(tst.input)
+        p := New(l)
+
+        program := p.ParseProgram()
+        checkErrors(t, p)
+
+        str := program.String()
+        if str != tst.expected {
+            t.Errorf("expected %q (got %q)", tst.expected, str)
+        }
     }
 }
 
