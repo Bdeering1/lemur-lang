@@ -124,6 +124,16 @@ func (il *IntegerLiteral) _exprNode(){}
 func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
 func (il *IntegerLiteral) String() string { return il.Token.Literal }
 
+type BooleanLiteral struct {
+    Token token.Token
+    Value bool
+}
+var _ Expression = (*BooleanLiteral)(nil)
+
+func (b *BooleanLiteral) _exprNode(){}
+func (b *BooleanLiteral) TokenLiteral() string { return b.Token.Literal }
+func (b *BooleanLiteral) String() string { return b.Token.Literal }
+
 type PrefixExpression struct {
     Token    token.Token
     Operator string

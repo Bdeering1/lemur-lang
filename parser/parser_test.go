@@ -58,14 +58,24 @@ func TestIntegerLiteralExpression(t *testing.T) {
     testIntegerLiteral(t, stmt.Value, 5)
 }
 
+func TestBooleanExpression(t *testing.T) {
+    input := "true;"
+    program := runNewParser(t, input, 1)
+
+    stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+    testBooleanLiteral(t, stmt.Value, true)
+}
+
 func TestPrefixExpression(t *testing.T) {
     prefixTests := []struct{
         input    string
         operator string
-        intValue int64
+        value    any
     }{
-        {"!5;", "!", 5},
-        {"-15;", "-", 15},
+        {"!5", "!", 5},
+        {"-15", "-", 15},
+        {"!true", "!", true},
+        {"!false", "!", false},
     }
 
     for _, pt := range prefixTests {
@@ -79,25 +89,28 @@ func TestPrefixExpression(t *testing.T) {
                 pt.operator,
                 exp.Operator)
         }
-        testIntegerLiteral(t, exp.Right, pt.intValue)
+        testLiteralExpression(t, exp.Right, pt.value)
     }
 }
 
 func TestInfixExpression(t *testing.T) {
     infixTests := []struct{
         input    string
-        leftVal  int64
+        leftVal  any
         operator string
-        rightVal int64
+        rightVal any
     }{
-        {"5 + 5;", 5, "+", 5},
-        {"5 - 5;", 5, "-", 5},
-        {"5 * 5;", 5, "*", 5},
-        {"5 / 5;", 5, "/", 5},
-        {"5 > 5;", 5, ">", 5},
-        {"5 < 5;", 5, "<", 5},
-        {"5 == 5;", 5, "==", 5},
-        {"5 != 5;", 5, "!=", 5},
+        {"5 + 5", 5, "+", 5},
+        {"5 - 5", 5, "-", 5},
+        {"5 * 5", 5, "*", 5},
+        {"5 / 5", 5, "/", 5},
+        {"5 > 5", 5, ">", 5},
+        {"5 < 5", 5, "<", 5},
+        {"5 == 5", 5, "==", 5},
+        {"5 != 5", 5, "!=", 5},
+        {"true == true", true, "==", true},
+        {"true != false", true, "!=", false},
+        {"false == false", false, "==", false},
     }
 
     for _, it := range infixTests {
@@ -113,6 +126,10 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
         input    string
         expected string
     }{
+        {"true", "true;"},
+        {"false", "false;"},
+        {"3 > 5 == false", "((3 > 5) == false);"},
+        {"3 < 5 == true", "((3 < 5) == true);"},
         {"-a * b", "((-a) * b);"},
         {"!-a", "(!(-a));"},
         {"a + b + c", "((a + b) + c);"},
@@ -155,15 +172,6 @@ func runNewParser(t *testing.T, input string, expStatements int) *ast.Program {
     return program
 }
 
-func assertCast[T ast.Node](t *testing.T, node ast.Node) T {
-    n, ok := node.(T)
-    if !ok {
-        t.Fatalf("node is not an %T (got %T)", *new(T), node)
-    }
-
-    return n
-}
-
 func checkErrors(t *testing.T, p *Parser) {
     errors := p.Errors()
     if len(errors) == 0  { return }
@@ -181,38 +189,29 @@ func testLetStatement(t *testing.T, s ast.Statement, expName string) {
         return
     }
 
-    letStmt, ok := s.(*ast.LetStatement)
-    if !ok {
-        t.Errorf("s is not *ast.LetStatement (got %T)", s)
-        return
-    }
-    if letStmt.Name.Value != expName {
+    ls := assertCast[*ast.LetStatement](t, s)
+
+    if ls.Name.Value != expName {
         t.Errorf("letStmt.Name.Value is not '%s' (got '%s')",
-            expName, letStmt.Name.Value)
+            expName, ls.Name.Value)
         return
     }
-    if letStmt.Name.TokenLiteral() != expName {
+    if ls.Name.TokenLiteral() != expName {
         t.Errorf("letStmt.Name.TokenLiteral is not '%s' (got '%s')",
-            expName, letStmt.Name.TokenLiteral())
+            expName, ls.Name.TokenLiteral())
     }
 }
 
 func testReturnStatement(t *testing.T, s ast.Statement) {
-    returnStmt, ok := s.(*ast.ReturnStatement)
-    if !ok {
-        t.Errorf("s is not *ast.ReturnStatement (got %T)", s)
-        return
-    }
-    if returnStmt.TokenLiteral() != "return" {
-        t.Errorf("s.TokenLiteral not 'return' (got '%s')", returnStmt.TokenLiteral())
+    rs := assertCast[*ast.ReturnStatement](t, s)
+
+    if rs.TokenLiteral() != "return" {
+        t.Errorf("s.TokenLiteral not 'return' (got '%s')", rs.TokenLiteral())
     }
 }
 
 func testInfixExpression(t *testing.T, exp ast.Expression, left any, op string, right any) {
-    ie, ok := exp.(*ast.InfixExpression)
-    if !ok {
-        t.Errorf("expression '%s' is not an ast.InfixExpression (got %T)", exp, exp)
-    }
+    ie := assertCast[*ast.InfixExpression](t, exp)
 
     if ie.Operator != op {
         t.Errorf("expression operator is not '%s' (got %s)", op, ie.Operator)
@@ -230,40 +229,58 @@ func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) {
     case int64:
         testIntegerLiteral(t, exp, v)
         return
+    case bool:
+        testBooleanLiteral(t, exp, v)
+        return
     case string:
         testIdentifier(t, exp, v)
         return
     }
 
-    t.Errorf("expression type not handled (got %T)", exp)
+    t.Errorf("expression type not handled for (got %T)", exp)
+}
+
+func testIdentifier(t *testing.T, exp ast.Expression, val string) {
+    i := assertCast[*ast.Identifier](t, exp)
+
+    if i.Value != val {
+        t.Errorf("ident.Value is not %s (got %s)", val, i.Value)
+    }
+    if i.TokenLiteral() != val {
+        t.Errorf("ident.TokenLiteral not %s (got %s)", val, i.TokenLiteral())
+    }
 }
 
 func testIntegerLiteral(t *testing.T, il ast.Expression, val int64) {
-    i, ok := il.(*ast.IntegerLiteral)
-    if !ok {
-        t.Errorf("il is not an *ast.IntegerLiteral (got %T)", il)
-        return
-    }
+    i := assertCast[*ast.IntegerLiteral](t, il)
 
     if i.Value != val {
         t.Errorf("i.Value is not %d (got %d)", val, i.Value)
         return
     }
-
     if i.TokenLiteral() != fmt.Sprintf("%d", val) {
         t.Errorf("i.TokenLiteral is not %d (got %s)", val, i.TokenLiteral())
     }
 }
 
-func testIdentifier(t *testing.T, exp ast.Expression, val string) {
-    ident, ok := exp.(*ast.Identifier)
-    if !ok {
-        t.Fatalf("expression is not an ast.Identifier (got %T)", exp)
+func testBooleanLiteral(t *testing.T, be ast.Expression, val bool) {
+    i := assertCast[*ast.BooleanLiteral](t, be)
+
+    if i.Value != val {
+        t.Errorf("i.Value is not %t (got %t)", val, i.Value)
+        return
     }
-    if ident.Value != val {
-        t.Errorf("ident.Value is not %s (got %s)", val, ident.Value)
-    }
-    if ident.TokenLiteral() != val {
-        t.Errorf("ident.TokenLiteral not %s (got %s)", val, ident.TokenLiteral())
+    if i.TokenLiteral() != fmt.Sprintf("%t", val) {
+        t.Errorf("i.TokenLiteral is not %t (got %s)", val, i.TokenLiteral())
     }
 }
+
+func assertCast[T ast.Node](t *testing.T, node ast.Node) T {
+    n, ok := node.(T)
+    if !ok {
+        t.Fatalf("node is not an %T (got %T)", *new(T), node)
+    }
+
+    return n
+}
+
