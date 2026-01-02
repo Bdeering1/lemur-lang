@@ -67,6 +67,7 @@ func New(l *lexer.Lexer) *Parser {
     p.registerPrefix(token.Int, p.parseIntegerLiteral)
     p.registerPrefix(token.True, p.parseBoolean)
     p.registerPrefix(token.False, p.parseBoolean)
+    p.registerPrefix(token.LParen, p.parseGroupedExpression)
     p.registerPrefix(token.Bang, p.parsePrefixExpression)
     p.registerPrefix(token.Minus, p.parsePrefixExpression)
 
@@ -102,6 +103,16 @@ func (p *Parser) Errors() []string {
     return p.errors
 }
 
+func (p *Parser) expectReadToken(tt token.TokenType) bool {
+    if !p.nextTokenIs(tt) {
+        p.expectError(tt)
+        return false
+    }
+
+    p.readToken()
+    return true
+}
+
 func (p *Parser) expectError(tt token.TokenType) {
     msg := fmt.Sprintf("expected %s, got %s", tt, p.nextToken.Type)
     p.errors = append(p.errors, msg)
@@ -125,12 +136,12 @@ func (p *Parser) parseStatement() ast.Statement {
 
 func (p *Parser) parseLetStatement() *ast.LetStatement {
     stmt := &ast.LetStatement{Token: p.curToken}
-    if !p.expectNext(token.Ident) {
+    if !p.expectReadToken(token.Ident) {
         return nil
     }
 
     stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
-    if !p.expectNext(token.Assign) {
+    if !p.expectReadToken(token.Assign) {
         return nil
     }
 
@@ -167,7 +178,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 
     for !p.nextTokenIs(token.Semicolon) && precedence < p.nextPrecedence() {
         infix := p.infixParseFns[p.nextToken.Type]
-        if infix == nil { // raise error here?
+        if infix == nil { // raise error here ?
             return leftExp
         }
 
@@ -176,28 +187,6 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
     }
 
     return leftExp
-}
-
-func (p *Parser) parseIdentifier() ast.Expression {
-    return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
-}
-
-func (p *Parser) parseIntegerLiteral() ast.Expression {
-    l := &ast.IntegerLiteral{Token: p.curToken}
-
-    val, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
-    if err != nil {
-        msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
-        p.errors = append(p.errors, msg)
-        return nil
-    }
-    l.Value = val
-
-    return l
-}
-
-func (p *Parser) parseBoolean() ast.Expression {
-    return &ast.BooleanLiteral{Token: p.curToken, Value: p.curTokenIs(token.True)}
 }
 
 func (p *Parser) parsePrefixExpression() ast.Expression {
@@ -226,18 +215,40 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
     return exp
 }
 
+func (p *Parser) parseIdentifier() ast.Expression {
+    return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+    l := &ast.IntegerLiteral{Token: p.curToken}
+
+    val, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
+    if err != nil {
+        msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
+        p.errors = append(p.errors, msg)
+        return nil
+    }
+    l.Value = val
+
+    return l
+}
+
+func (p *Parser) parseBoolean() ast.Expression {
+    return &ast.BooleanLiteral{Token: p.curToken, Value: p.curTokenIs(token.True)}
+}
+
+func (p *Parser) parseGroupedExpression() ast.Expression {
+    p.readToken()
+
+    exp := p.parseExpression(Lowest)
+    if !p.expectReadToken(token.RParen) { return nil }
+
+    return exp
+}
+
 func (p *Parser) readToken() {
     p.curToken = p.nextToken
     p.nextToken = p.lex.NextToken()
-}
-
-func (p *Parser) expectNext(tt token.TokenType) bool {
-    if p.nextTokenIs(tt) {
-        p.readToken()
-        return true
-    }
-    p.expectError(tt)
-    return false
 }
 
 func (p *Parser) curTokenIs(tt token.TokenType) bool { return p.curToken.Type == tt }

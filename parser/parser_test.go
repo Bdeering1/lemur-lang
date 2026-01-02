@@ -121,7 +121,7 @@ func TestInfixExpression(t *testing.T) {
     }
 }
 
-func TestOperatorPrecedenceParsing(t *testing.T) {
+func TestOperatorPrecedence(t *testing.T) {
     tests := []struct{
         input    string
         expected string
@@ -138,10 +138,14 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
         {"a * b / c", "((a * b) / c);"},
         {"a + b / c", "(a + (b / c));"},
         {"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f);"},
-        // {"3 + 4; -5 * 5", "(3 + 4);((-5) * 5);"},
         {"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4));"},
         {"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4));"},
         {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)));"},
+        {"1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4);"},
+        {"(5 + 5) * 2", "((5 + 5) * 2);"},
+        {"2 / (5 + 5)", "(2 / (5 + 5));"},
+        {"-(5 + 5)", "(-(5 + 5));"},
+        {"!(true == true)", "(!(true == true));"},
     }
 
     for _, tst := range tests {
