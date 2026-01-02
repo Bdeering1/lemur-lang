@@ -139,8 +139,8 @@ func tTok(l string) (t tToken) {
         case "/": t.expType = token.Slash
         case "<": t.expType = token.LT
         case ">": t.expType = token.GT
-        case "==": t.expType = token.EQ
-        case "!=": t.expType = token.NOTEQ
+        case "==": t.expType = token.Eq
+        case "!=": t.expType = token.NotEq
         case "fn": t.expType = token.Function
         case "let": t.expType = token.Let
         case "true": t.expType = token.True

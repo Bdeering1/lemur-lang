@@ -36,13 +36,32 @@ func (p *Program) String() string {
     for _, s := range p.Statements {
         out.WriteString(s.String())
     }
+    return out.String()
+}
+
+type BlockStatement struct {
+    Token        token.Token
+    Statements []Statement
+}
+var _ Statement = (*BlockStatement)(nil)
+
+func (bs *BlockStatement) _stmtNode(){}
+func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
+func (bs *BlockStatement) String() string {
+    var out bytes.Buffer
+
+    out.WriteString("{")
+    for _, s := range bs.Statements {
+        out.WriteString(s.String())
+    }
+    out.WriteString("}")
 
     return out.String()
 }
 
 type LetStatement struct {
     Token token.Token
-    Name *Identifier // isn't this the same as the identifier token?
+    Name *Identifier
     Value Expression
 }
 var _ Statement = (*LetStatement)(nil)
@@ -172,6 +191,32 @@ func (ie *InfixExpression) String() string {
     out.WriteString(" " + ie.Operator + " ")
     out.WriteString(ie.Right.String())
     out.WriteString(")")
+
+    return out.String()
+}
+
+type ConditionalExpression struct {
+    Token token.Token
+    Condition    Expression
+    Consequence *BlockStatement
+    Alternative *BlockStatement
+}
+var _ Expression = (*ConditionalExpression)(nil)
+
+func (ce *ConditionalExpression) _exprNode(){}
+func (ce *ConditionalExpression) TokenLiteral() string { return ce.Token.Literal }
+func (ce *ConditionalExpression) String() string {
+    var out bytes.Buffer
+
+    out.WriteString("if")
+    out.WriteString(ce.Condition.String())
+    out.WriteString(" ")
+    out.WriteString(ce.Consequence.String())
+
+    if (ce.Alternative != nil) {
+        out.WriteString("else")
+        out.WriteString(ce.Alternative.String())
+    }
 
     return out.String()
 }
