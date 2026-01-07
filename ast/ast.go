@@ -2,6 +2,7 @@ package ast
 
 import (
     "bytes"
+    "encoding/json"
 
     "lemur/token"
 )
@@ -36,6 +37,17 @@ func (p *Program) String() string {
     for _, s := range p.Statements {
         out.WriteString(s.String())
     }
+    return out.String()
+}
+func (p *Program) PrintAST() string {
+    var out bytes.Buffer
+
+    for _, s := range p.Statements {
+        bytes, _ := json.MarshalIndent(s, "", "  ")
+        out.WriteString(string(bytes))
+    }
+    out.WriteString("\n")
+
     return out.String()
 }
 

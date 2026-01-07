@@ -164,17 +164,20 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 
     stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
     if !p.expectRead(token.Assign) { return nil }
+    p.readToken()
 
-    for !p.curTokenIs(token.Semicolon) { p.readToken() } // todo: parse expression here
+    stmt.Value = p.parseExpression(Lowest)
+    if p.nextTokenIs(token.Semicolon) { p.readToken() }
 
     return stmt
 }
 
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
     stmt := &ast.ReturnStatement{Token: p.curToken}
-
     p.readToken()
-    for !p.curTokenIs(token.Semicolon) { p.readToken() }
+
+    stmt.Value = p.parseExpression(Lowest)
+    if p.nextTokenIs(token.Semicolon) { p.readToken() }
 
     return stmt
 }
