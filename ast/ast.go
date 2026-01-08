@@ -2,7 +2,9 @@ package ast
 
 import (
     "bytes"
-    "encoding/json"
+    "fmt"
+    "reflect"
+    "strings"
 
     "lemur/token"
 )
@@ -40,15 +42,53 @@ func (p *Program) String() string {
     return out.String()
 }
 func (p *Program) PrintAST() string {
-    var out bytes.Buffer
+    var b strings.Builder
 
-    for _, s := range p.Statements {
-        bytes, _ := json.MarshalIndent(s, "", "  ")
-        out.WriteString(string(bytes))
-    }
-    out.WriteString("\n")
+    prettyPrint(&b, reflect.ValueOf(p.Statements), 0)
+    b.WriteString("\n")
 
-    return out.String()
+    return b.String()
+}
+
+func prettyPrint(b *strings.Builder, val reflect.Value, indent int) {
+	indentStr := strings.Repeat("  ", indent)
+
+    k := val.Kind()
+	if k == reflect.Ptr || k == reflect.Interface {
+		if val.IsNil() { b.WriteString("<nil>"); return }
+
+        prettyPrint(b, val.Elem(), indent)
+        return
+	}
+
+	switch k {
+	case reflect.Struct:
+		t := val.Type()
+
+		b.WriteString(fmt.Sprintf("%s {\n", t.Name()))
+		for i := range val.NumField() {
+			b.WriteString(fmt.Sprintf("%s  %s: ", indentStr, t.Field(i).Name))
+			prettyPrint(b, val.Field(i), indent + 1)
+			b.WriteString("\n")
+		}
+		b.WriteString(fmt.Sprintf("%s}", indentStr))
+
+	case reflect.Slice, reflect.Array:
+		if val.Len() == 0 { b.WriteString("[]"); return }
+
+		b.WriteString("[\n")
+		for i := range val.Len() {
+            b.WriteString(fmt.Sprintf("%s  ", indentStr))
+			prettyPrint(b, val.Index(i), indent + 1)
+			b.WriteString(",\n")
+		}
+		b.WriteString(fmt.Sprintf("%s]", indentStr))
+
+	case reflect.String:
+		b.WriteString(fmt.Sprintf("%q", val.String()))
+	default:
+		b.WriteString(fmt.Sprintf("%+v", val.Interface()))
+	}
 }
 
 type BlockStatement struct {
