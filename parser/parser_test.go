@@ -180,6 +180,38 @@ func TestIfElseExpression(t *testing.T) {
     testIdentifier(t, alt.Value, "y")
 }
 
+func TestFunctionLiteral(t *testing.T) {
+    input := "fn(x, y) { x + y; }"
+
+    program := runNewParser(t, input, 1)
+    stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+
+    testFunctionLiteral(t, stmt.Value, 1, []string{"x", "y"})
+
+    f, _ := stmt.Value.(*ast.FunctionLiteral)
+    es := assertCast[*ast.ExpressionStatement](t, f.Body.Statements[0])
+
+    testInfixExpression(t, es.Value, "x", "+", "y")
+}
+
+func TestFunctionLiteralParameters(t *testing.T) {
+    tests := []struct{
+        input      string
+        expected []string
+    }{
+        {input: "fn(){}", expected: []string{}},
+        {input: "fn(x){}", expected: []string{"x"}},
+        {input: "fn(x, y, z){}", expected: []string{"x", "y", "z"}},
+    }
+
+    for _, tst := range tests {
+        program := runNewParser(t, tst.input, 1)
+        stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+
+        testFunctionLiteral(t, stmt.Value, 0, tst.expected)
+    }
+}
+
 func TestIdentifierExpression(t *testing.T) {
     input := "foobar;"
     program := runNewParser(t, input, 1)
@@ -269,6 +301,26 @@ func testInfixExpression(t *testing.T, exp ast.Expression, left any, op string, 
 
     testLiteralExpression(t, ie.Left, left)
     testLiteralExpression(t, ie.Right, right)
+}
+
+func testFunctionLiteral(t *testing.T, exp ast.Expression, stmts int, params []string) {
+    f := assertCast[*ast.FunctionLiteral](t, exp)
+
+    if len(f.Parameters) != len(params) {
+        t.Fatalf("wrong number of parameters in function literal, should be %d (got %d)",
+            len(params),
+            len(f.Parameters))
+    }
+
+    for i, ident := range params {
+        testLiteralExpression(t, f.Parameters[i], ident)
+    }
+
+    if len(f.Body.Statements) != stmts {
+        t.Fatalf("function body should contain %d statements (got %d)",
+            len(f.Body.Statements),
+            stmts)
+    }
 }
 
 func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) {

@@ -71,6 +71,7 @@ func New(l *lexer.Lexer) *Parser {
     p.registerPrefix(token.Bang, p.parsePrefixExpression)
     p.registerPrefix(token.Minus, p.parsePrefixExpression)
     p.registerPrefix(token.If, p.parseConditionalExpression)
+    p.registerPrefix(token.Function, p.parseFunctionLiteral)
 
     p.infixParseFns = make(map[token.TokenType]infixParseFn)
     p.registerInfix(token.Plus, p.parseInfixExpression)
@@ -124,26 +125,6 @@ func (p *Parser) noPrefixParseFnError(tt token.TokenType) {
     p.errors = append(p.errors, msg)
 }
 
-func (p *Parser) parseBlockStatement() *ast.BlockStatement {
-    block := &ast.BlockStatement{
-        Token: p.curToken,
-        Statements: []ast.Statement{},
-    }
-
-    p.readToken()
-    for !p.curTokenIs(token.RBrace) {
-        if p.curTokenIs(token.EOF) { return block }
-
-        stmt := p.parseStatement()
-        p.readToken()
-
-        if stmt == nil { continue }
-        block.Statements = append(block.Statements, stmt)
-    }
-    p.readToken()
-
-    return block
-}
 
 func (p *Parser) parseStatement() ast.Statement {
     switch p.curToken.Type {
@@ -156,6 +137,27 @@ func (p *Parser) parseStatement() ast.Statement {
     default:
         return p.parseExpressionStatement()
     }
+}
+
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+    block := &ast.BlockStatement{
+        Token: p.curToken,
+        Statements: []ast.Statement{},
+    }
+
+    p.readToken()
+    for !p.curTokenIs(token.RBrace) {
+        if p.curTokenIs(token.EOF) { return block } // raise error here
+
+        stmt := p.parseStatement()
+        p.readToken()
+
+        if stmt == nil { continue }
+        block.Statements = append(block.Statements, stmt)
+    }
+    p.readToken()
+
+    return block
 }
 
 func (p *Parser) parseLetStatement() *ast.LetStatement {
@@ -201,7 +203,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 
     for !p.nextTokenIs(token.Semicolon) && precedence < p.nextPrecedence() {
         infix := p.infixParseFns[p.nextToken.Type]
-        if infix == nil { // raise error here ? (except '{', '}', ',')
+        if infix == nil { // raise error here - except '{', '}', ','
             return leftExp
         }
 
@@ -255,6 +257,40 @@ func (p *Parser) parseConditionalExpression() ast.Expression {
     exp.Alternative = p.parseBlockStatement()
 
     return exp
+}
+
+func (p *Parser) parseFunctionLiteral() ast.Expression {
+    l := &ast.FunctionLiteral{Token: p.curToken}
+
+    if !p.expectRead(token.LParen) { return nil }
+
+    l.Parameters = p.parseFunctionParameters()
+    if !p.expectRead(token.LBrace) { return nil}
+
+    l.Body = p.parseBlockStatement()
+
+    return l
+}
+
+func (p *Parser) parseFunctionParameters() []*ast.Identifier {
+    idents := []*ast.Identifier{}
+
+    p.readToken()
+    if p.curTokenIs(token.RParen) { return idents }
+
+    i := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+    idents = append(idents, i)
+
+    for p.nextTokenIs(token.Comma) {
+        p.readToken()
+        p.readToken()
+        i := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+        idents = append(idents, i)
+    }
+
+    if !p.expectRead(token.RParen) { return nil }
+
+    return idents
 }
 
 func (p *Parser) parseGroupedExpression() ast.Expression {

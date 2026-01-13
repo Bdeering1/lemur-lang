@@ -44,6 +44,7 @@ func (p *Program) String() string {
 func (p *Program) PrintAST() string {
     var b strings.Builder
 
+    //b.WriteString(p.String())
     prettyPrint(&b, reflect.ValueOf(p.Statements), 0)
     b.WriteString("\n")
 
@@ -51,7 +52,7 @@ func (p *Program) PrintAST() string {
 }
 
 func prettyPrint(b *strings.Builder, val reflect.Value, indent int) {
-	indentStr := strings.Repeat("  ", indent)
+    indentStr := strings.Repeat("  ", indent)
 
     k := val.Kind()
 	if k == reflect.Ptr || k == reflect.Interface {
@@ -248,7 +249,7 @@ func (ie *InfixExpression) String() string {
 }
 
 type ConditionalExpression struct {
-    Token token.Token
+    Token	 token.Token
     Condition    Expression
     Consequence *BlockStatement
     Alternative *BlockStatement
@@ -269,6 +270,32 @@ func (ce *ConditionalExpression) String() string {
         out.WriteString("else")
         out.WriteString(ce.Alternative.String())
     }
+
+    return out.String()
+}
+
+type FunctionLiteral struct {
+    Token	 token.Token
+    Parameters []*Identifier
+    Body	 *BlockStatement
+}
+var _ Expression = (*FunctionLiteral)(nil)
+
+func (fl *FunctionLiteral) _exprNode(){}
+func (fl *FunctionLiteral) TokenLiteral() string { return fl.Token.Literal }
+func (fl *FunctionLiteral) String() string {
+    var out bytes.Buffer
+
+    params := []string{}
+    for _, p := range fl.Parameters {
+	params = append(params, p.String())
+    }
+
+    out.WriteString(fl.Token.Literal)
+    out.WriteString("(")
+    out.WriteString(strings.Join(params, ", "))
+    out.WriteString(")")
+    out.WriteString(fl.Body.String())
 
     return out.String()
 }
