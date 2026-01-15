@@ -265,7 +265,8 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
     if !p.expectRead(token.LParen) { return nil }
 
     l.Parameters = p.parseFunctionParameters()
-    if !p.expectRead(token.LBrace) { return nil}
+    if l.Parameters == nil ||
+       !p.expectRead(token.LBrace) { return nil}
 
     l.Body = p.parseBlockStatement()
 

@@ -44,7 +44,6 @@ func (p *Program) String() string {
 func (p *Program) PrintAST() string {
     var b strings.Builder
 
-    //b.WriteString(p.String())
     prettyPrint(&b, reflect.ValueOf(p.Statements), 0)
     b.WriteString("\n")
 
