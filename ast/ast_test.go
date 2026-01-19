@@ -8,17 +8,15 @@ import (
 
 func TestString(t *testing.T) {
     program := &Program{
-        Statements: []Statement{
-            &LetStatement{
-                Token: token.New(token.Let, "let"),
-                Name: &Identifier{
-                    Token: token.New(token.Ident, "myVar"),
-                    Value: "myVar",
-                },
-                Value: &Identifier{
-                    Token: token.New(token.Ident, "anotherVar"),
-                    Value: "anotherVar",
-                },
+        &LetStatement{
+            Token: token.New(token.Let, "let"),
+            Name: &Identifier{
+                Token: token.New(token.Ident, "myVar"),
+                Value: "myVar",
+            },
+            Value: &Identifier{
+                Token: token.New(token.Ident, "anotherVar"),
+                Value: "anotherVar",
             },
         },
     }

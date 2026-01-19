@@ -39,7 +39,8 @@ type (
 type Parser struct {
     lex *lexer.Lexer
 
-    errors []string
+    errors  []string
+    invalid   bool
     curToken  token.Token
     nextToken token.Token
 
@@ -86,16 +87,15 @@ func New(l *lexer.Lexer) *Parser {
     return p
 }
 
-func (p *Parser) ParseProgram() *ast.Program {
-    program := &ast.Program{}
-    program.Statements = []ast.Statement{}
+func (p *Parser) ParseProgram() ast.Program {
+    program := ast.Program{}
 
     for !p.curTokenIs(token.EOF) {
         stmt := p.parseStatement()
         p.readToken()
 
-        if stmt == nil { continue }
-        program.Statements = append(program.Statements, stmt)
+        if p.invalid { break }
+        program = append(program, stmt)
     }
 
     return program
@@ -116,13 +116,16 @@ func (p *Parser) expectRead(tt token.TokenType) bool {
 }
 
 func (p *Parser) expectError(tt token.TokenType) {
-    msg := fmt.Sprintf("expected %s, got %s", tt, p.nextToken.Type)
-    p.errors = append(p.errors, msg)
+    p.raiseError(fmt.Sprintf("expected %s, got %s", tt, p.nextToken.Type))
 }
 
 func (p *Parser) noPrefixParseFnError(tt token.TokenType) {
-    msg := fmt.Sprintf("no prefix parse function found for '%s'", tt)
+    p.raiseError(fmt.Sprintf("no prefix parse function found for '%s'", tt))
+}
+
+func (p *Parser) raiseError(msg string) {
     p.errors = append(p.errors, msg)
+    p.invalid = true
 }
 
 
@@ -147,7 +150,10 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 
     p.readToken()
     for !p.curTokenIs(token.RBrace) {
-        if p.curTokenIs(token.EOF) { return block } // raise error here
+        if p.curTokenIs(token.EOF) {
+            p.raiseError("Reach EOF before closing brace in block statement (missing '}')")
+            return block
+        }
 
         stmt := p.parseStatement()
         p.readToken()
@@ -188,6 +194,8 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
     stmt := &ast.ExpressionStatement{Token: p.curToken}
 
     stmt.Value = p.parseExpression(Lowest)
+    if stmt.Value == nil { return nil }
+
     if p.nextTokenIs(token.Semicolon) { p.readToken() }
 
     return stmt
@@ -199,7 +207,9 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
         p.noPrefixParseFnError(p.curToken.Type)
         return nil
     }
+
     leftExp := prefix()
+    if leftExp == nil { return nil }
 
     for !p.nextTokenIs(token.Semicolon) && precedence < p.nextPrecedence() {
         infix := p.infixParseFns[p.nextToken.Type]
@@ -266,7 +276,7 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 
     l.Parameters = p.parseFunctionParameters()
     if l.Parameters == nil ||
-       !p.expectRead(token.LBrace) { return nil}
+       !p.expectRead(token.LBrace) { return nil }
 
     l.Body = p.parseBlockStatement()
 

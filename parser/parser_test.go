@@ -24,7 +24,7 @@ func TestLetStatement(t *testing.T) {
         {"foobar"},
     }
     for i, tst := range tests {
-        stmt := program.Statements[i]
+        stmt := program[i]
         testLetStatement(t, stmt, tst.expIdentifier)
     }
 }
@@ -37,7 +37,7 @@ func TestReturnStatement(t *testing.T) {
     `
     program := runNewParser(t, input, 3)
 
-    for _, stmt := range program.Statements {
+    for _, stmt := range program {
         testReturnStatement(t, stmt)
     }
 }
@@ -103,7 +103,7 @@ func TestInfixExpression(t *testing.T) {
     for _, it := range infixTests {
         program := runNewParser(t, it.input, 1)
 
-        stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+        stmt := assertCast[*ast.ExpressionStatement](t, program[0])
         testInfixExpression(t, stmt.Value, it.leftVal, it.operator, it.rightVal)
     }
 }
@@ -123,7 +123,7 @@ func TestPrefixExpression(t *testing.T) {
     for _, pt := range prefixTests {
         program := runNewParser(t, pt.input, 1)
 
-        stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+        stmt := assertCast[*ast.ExpressionStatement](t, program[0])
         exp := assertCast[*ast.PrefixExpression](t, stmt.Value)
 
         if exp.Operator != pt.operator {
@@ -140,7 +140,7 @@ func TestIfExpression(t *testing.T) {
 
     program := runNewParser(t, input, 1)
 
-    stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
     exp := assertCast[*ast.ConditionalExpression](t, stmt.Value)
     testInfixExpression(t, exp.Condition, "x", "<", "y")
 
@@ -161,7 +161,7 @@ func TestIfElseExpression(t *testing.T) {
 
     program := runNewParser(t, input, 1)
 
-    stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
     exp := assertCast[*ast.ConditionalExpression](t, stmt.Value)
     testInfixExpression(t, exp.Condition, "x", "<", "y")
 
@@ -184,7 +184,7 @@ func TestFunctionLiteral(t *testing.T) {
     input := "fn(x, y) { x + y; }"
 
     program := runNewParser(t, input, 1)
-    stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
 
     testFunctionLiteral(t, stmt.Value, 1, []string{"x", "y"})
 
@@ -206,7 +206,7 @@ func TestFunctionLiteralParameters(t *testing.T) {
 
     for _, tst := range tests {
         program := runNewParser(t, tst.input, 1)
-        stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+        stmt := assertCast[*ast.ExpressionStatement](t, program[0])
 
         testFunctionLiteral(t, stmt.Value, 0, tst.expected)
     }
@@ -216,7 +216,7 @@ func TestIdentifierExpression(t *testing.T) {
     input := "foobar;"
     program := runNewParser(t, input, 1)
 
-    stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
     testIdentifier(t, stmt.Value, "foobar")
 }
 
@@ -224,7 +224,7 @@ func TestIntegerLiteralExpression(t *testing.T) {
     input := "5;"
     program := runNewParser(t, input, 1)
 
-    stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
     testIntegerLiteral(t, stmt.Value, 5)
 }
 
@@ -232,11 +232,11 @@ func TestBooleanExpression(t *testing.T) {
     input := "true;"
     program := runNewParser(t, input, 1)
 
-    stmt := assertCast[*ast.ExpressionStatement](t, program.Statements[0])
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
     testBooleanLiteral(t, stmt.Value, true)
 }
 
-func runNewParser(t *testing.T, input string, expStatements int) *ast.Program {
+func runNewParser(t *testing.T, input string, expStatements int) ast.Program {
     l := lexer.New(input)
     p := New(l)
     
@@ -245,10 +245,10 @@ func runNewParser(t *testing.T, input string, expStatements int) *ast.Program {
     if program == nil {
         t.Fatalf("ParseProgram() returned nil")
     }
-    if len(program.Statements) != expStatements {
+    if len(program) != expStatements {
         t.Fatalf("program statements should contain %d entries (got %d)",
             expStatements,
-            len(program.Statements))
+            len(program))
     }
 
     return program
