@@ -9,36 +9,48 @@ import (
 )
 
 func TestLetStatement(t *testing.T) {
-    input := `
-        let x = 5;
-        let y = 10;
-        let foobar = 1729;
-    `
-    program := runNewParser(t, input, 3)
-
-    tests := []struct{
+    tests := []struct {
+        input         string
         expIdentifier string
+        expValue      any
     }{
-        {"x"},
-        {"y"},
-        {"foobar"},
+        {"let x = 5;", "x", 5},
+        {"let y = true;", "y", true},
+        {"let foobar = y;", "foobar", "y"},
     }
-    for i, tst := range tests {
-        stmt := program[i]
-        testLetStatement(t, stmt, tst.expIdentifier)
+
+    for _, tst := range tests {
+        program := runNewParser(t, tst.input, 1)
+        ls := assertCast[*ast.LetStatement](t, program[0])
+
+        if ls.TokenLiteral() != "let" {
+            t.Errorf("statement token literal is not 'let' (got '%s')", ls)
+            return
+        }
+
+        testIdentifier(t, ls.Name, tst.expIdentifier)
+        testLiteralExpression(t, ls.Value, tst.expValue)
     }
 }
 
 func TestReturnStatement(t *testing.T) {
-    input := `
-        return 5;
-        return 10;
-        return 993322;
-    `
-    program := runNewParser(t, input, 3)
+    tests := []struct{
+        input    string
+        expValue any
+    }{
+        {"return 5;", 5},
+        {"return true;", true},
+        {"return y;", "y"},
+    }
 
-    for _, stmt := range program {
-        testReturnStatement(t, stmt)
+    for _, tst := range tests {
+        program := runNewParser(t, tst.input, 1)
+        rs := assertCast[*ast.ReturnStatement](t, program[0])
+
+        if rs.TokenLiteral() != "return" {
+            t.Errorf("statement token literal is not 'return' (got '%s')", rs.TokenLiteral())
+        }
+        testLiteralExpression(t, rs.Value, tst.expValue)
     }
 }
 
@@ -280,33 +292,6 @@ func checkErrors(t *testing.T, p *Parser) {
         t.Errorf("\t%q", msg)
     }
     t.FailNow()
-}
-
-func testLetStatement(t *testing.T, s ast.Statement, expName string) {
-    if s.TokenLiteral() != "let" {
-        t.Errorf("statement token literal is not 'let' (got '%s')", s)
-        return
-    }
-
-    ls := assertCast[*ast.LetStatement](t, s)
-
-    if ls.Name.Value != expName {
-        t.Errorf("identifier value is not '%s' (got '%s')",
-            expName, ls.Name.Value)
-        return
-    }
-    if ls.Name.TokenLiteral() != expName {
-        t.Errorf("identifier token literal is not is not '%s' (got '%s')",
-            expName, ls.Name.TokenLiteral())
-    }
-}
-
-func testReturnStatement(t *testing.T, s ast.Statement) {
-    rs := assertCast[*ast.ReturnStatement](t, s)
-
-    if rs.TokenLiteral() != "return" {
-        t.Errorf("statement token literal is not 'return' (got '%s')", rs.TokenLiteral())
-    }
 }
 
 func testInfixExpression(t *testing.T, exp ast.Expression, left any, op string, right any) {
