@@ -212,6 +212,23 @@ func TestFunctionLiteralParameters(t *testing.T) {
     }
 }
 
+func TestCallExpression(t *testing.T) {
+    input := "add(1, 2 * 3, 4 + 5)"
+
+    program := runNewParser(t, input, 1)
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
+    exp := assertCast[*ast.CallExpression](t, stmt.Value)
+
+    testIdentifier(t, exp.Function, "add")
+
+    if len(exp.Arguments) != 3 {
+        t.Errorf("call expression should contain %d arguments (got %d)", 3, exp.Arguments)
+    }
+    testLiteralExpression(t, exp.Arguments[0], 1)
+    testInfixExpression(t, exp.Arguments[1], 2, "*", 3)
+    testInfixExpression(t, exp.Arguments[2], 4, "+", 5)
+}
+
 func TestIdentifierExpression(t *testing.T) {
     input := "foobar;"
     program := runNewParser(t, input, 1)

@@ -29,6 +29,7 @@ var precedences = map[token.TokenType]int{
     token.Minus:    Sum,
     token.Slash:    Product,
     token.Asterisk: Product,
+    token.LParen:   Call,
 }
 
 type (
@@ -83,6 +84,7 @@ func New(l *lexer.Lexer) *Parser {
     p.registerInfix(token.NotEq, p.parseInfixExpression)
     p.registerInfix(token.LT, p.parseInfixExpression)
     p.registerInfix(token.GT, p.parseInfixExpression)
+    p.registerInfix(token.LParen, p.parseCallExpression)
 
     return p
 }
@@ -251,7 +253,7 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 }
 
 func (p *Parser) parseConditionalExpression() ast.Expression {
-    exp:= &ast.ConditionalExpression{Token: p.curToken}
+    exp := &ast.ConditionalExpression{Token: p.curToken}
 
     if p.nextTokenIs(token.LParen) { p.readToken() }
     p.readToken()
@@ -273,6 +275,7 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
     l := &ast.FunctionLiteral{Token: p.curToken}
 
     if !p.expectRead(token.LParen) { return nil }
+    p.readToken()
 
     l.Parameters = p.parseFunctionParameters()
     if l.Parameters == nil ||
@@ -286,7 +289,6 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 func (p *Parser) parseFunctionParameters() []*ast.Identifier {
     idents := []*ast.Identifier{}
 
-    p.readToken()
     if p.curTokenIs(token.RParen) { return idents }
 
     i := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
@@ -302,6 +304,31 @@ func (p *Parser) parseFunctionParameters() []*ast.Identifier {
     if !p.expectRead(token.RParen) { return nil }
 
     return idents
+}
+
+func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
+    exp := &ast.CallExpression{Token: p.curToken, Function: function}
+
+    p.readToken()
+    exp.Arguments = p.parseCallArguments()
+
+    return exp
+}
+
+func (p *Parser) parseCallArguments() []ast.Expression {
+    args := []ast.Expression{}
+
+    if p.curTokenIs(token.RParen) { return args }
+
+    args = append(args, p.parseExpression(Lowest))
+    for p.nextTokenIs(token.Comma) {
+        p.readToken()
+        p.readToken()
+        args = append(args, p.parseExpression(Lowest))
+    }
+
+    if !p.expectRead(token.RParen) { return nil }
+    return args
 }
 
 func (p *Parser) parseGroupedExpression() ast.Expression {

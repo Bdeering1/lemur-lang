@@ -84,7 +84,7 @@ func parse(input string, stringify bool) {
 
     program := p.ParseProgram()
     if stringify {
-        fmt.Printf("%s\n", program)
+        fmt.Printf("%s\n", program.String())
     } else {
         fmt.Printf("%s", program.PrintAST())
     }
