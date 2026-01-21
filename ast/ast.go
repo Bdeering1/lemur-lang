@@ -243,7 +243,7 @@ func (ce *ConditionalExpression) _exprNode(){}
 func (ce *ConditionalExpression) String() string {
     var out bytes.Buffer
 
-    out.WriteString("if")
+    out.WriteString("if ")
     out.WriteString(ce.Condition.String())
     out.WriteString(" ")
     out.WriteString(ce.Consequence.String())

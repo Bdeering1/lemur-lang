@@ -23,7 +23,7 @@ func TestLetStatement(t *testing.T) {
         program := runNewParser(t, tst.input, 1)
         ls := assertCast[*ast.LetStatement](t, program[0])
 
-        if ls.TokenLiteral() != "let" {
+        if ls.Token.Literal != "let" {
             t.Errorf("statement token literal is not 'let' (got '%s')", ls)
             return
         }
@@ -47,8 +47,8 @@ func TestReturnStatement(t *testing.T) {
         program := runNewParser(t, tst.input, 1)
         rs := assertCast[*ast.ReturnStatement](t, program[0])
 
-        if rs.TokenLiteral() != "return" {
-            t.Errorf("statement token literal is not 'return' (got '%s')", rs.TokenLiteral())
+        if rs.Token.Literal != "return" {
+            t.Errorf("statement token literal is not 'return' (got '%s')", rs.Token.Literal)
         }
         testLiteralExpression(t, rs.Value, tst.expValue)
     }
@@ -350,8 +350,8 @@ func testIdentifier(t *testing.T, exp ast.Expression, val string) {
     if i.Value != val {
         t.Errorf("identifier value is not %s (got %s)", val, i.Value)
     }
-    if i.TokenLiteral() != val {
-        t.Errorf("identifier token literal is not %s (got %s)", val, i.TokenLiteral())
+    if i.Token.Literal != val {
+        t.Errorf("identifier token literal is not %s (got %s)", val, i.Token.Literal)
     }
 }
 
@@ -362,8 +362,8 @@ func testIntegerLiteral(t *testing.T, il ast.Expression, val int64) {
         t.Errorf("integer value is not %d (got %d)", val, i.Value)
         return
     }
-    if i.TokenLiteral() != fmt.Sprintf("%d", val) {
-        t.Errorf("integer token literal is not %d (got %s)", val, i.TokenLiteral())
+    if i.Token.Literal != fmt.Sprintf("%d", val) {
+        t.Errorf("integer token literal is not %d (got %s)", val, i.Token.Literal)
     }
 }
 
@@ -374,8 +374,8 @@ func testBooleanLiteral(t *testing.T, be ast.Expression, val bool) {
         t.Errorf("boolean value is not %t (got %t)", val, i.Value)
         return
     }
-    if i.TokenLiteral() != fmt.Sprintf("%t", val) {
-        t.Errorf("boolean token literal is not %t (got %s)", val, i.TokenLiteral())
+    if i.Token.Literal != fmt.Sprintf("%t", val) {
+        t.Errorf("boolean token literal is not %t (got %s)", val, i.Token.Literal)
     }
 }
 
