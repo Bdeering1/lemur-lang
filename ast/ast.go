@@ -10,7 +10,6 @@ import (
 )
 
 type Node interface {
-    TokenLiteral() string
     String() string
 }
 
@@ -48,41 +47,41 @@ func prettyPrint(b *strings.Builder, val reflect.Value, indent int) {
     indentStr := strings.Repeat("  ", indent)
 
     k := val.Kind()
-	if k == reflect.Ptr || k == reflect.Interface {
+    if k == reflect.Ptr || k == reflect.Interface {
 		if val.IsNil() { b.WriteString("<nil>"); return }
 
         prettyPrint(b, val.Elem(), indent)
         return
-	}
+    }
 
-	switch k {
-	case reflect.Struct:
-		t := val.Type()
+    switch k {
+    case reflect.Struct:
+	    t := val.Type()
 
-		b.WriteString(fmt.Sprintf("%s {\n", t.Name()))
-		for i := range val.NumField() {
-			b.WriteString(fmt.Sprintf("%s  %s: ", indentStr, t.Field(i).Name))
-			prettyPrint(b, val.Field(i), indent + 1)
-			b.WriteString("\n")
-		}
-		b.WriteString(fmt.Sprintf("%s}", indentStr))
+	    b.WriteString(fmt.Sprintf("%s {\n", t.Name()))
+	    for i := range val.NumField() {
+		    b.WriteString(fmt.Sprintf("%s  %s: ", indentStr, t.Field(i).Name))
+		    prettyPrint(b, val.Field(i), indent + 1)
+		    b.WriteString("\n")
+	    }
+	    b.WriteString(fmt.Sprintf("%s}", indentStr))
 
-	case reflect.Slice, reflect.Array:
-		if val.Len() == 0 { b.WriteString("[]"); return }
+    case reflect.Slice, reflect.Array:
+	    if val.Len() == 0 { b.WriteString("[]"); return }
 
-		b.WriteString("[\n")
-		for i := range val.Len() {
-            b.WriteString(fmt.Sprintf("%s  ", indentStr))
-			prettyPrint(b, val.Index(i), indent + 1)
-			b.WriteString(",\n")
-		}
-		b.WriteString(fmt.Sprintf("%s]", indentStr))
+	    b.WriteString("[\n")
+	    for i := range val.Len() {
+	b.WriteString(fmt.Sprintf("%s  ", indentStr))
+		    prettyPrint(b, val.Index(i), indent + 1)
+		    b.WriteString(",\n")
+	    }
+	    b.WriteString(fmt.Sprintf("%s]", indentStr))
 
-	case reflect.String:
-		b.WriteString(fmt.Sprintf("%q", val.String()))
-	default:
-		b.WriteString(fmt.Sprintf("%+v", val.Interface()))
-	}
+    case reflect.String:
+	    b.WriteString(fmt.Sprintf("%q", val.String()))
+    default:
+	    b.WriteString(fmt.Sprintf("%+v", val.Interface()))
+    }
 }
 
 type BlockStatement struct {
@@ -92,7 +91,6 @@ type BlockStatement struct {
 var _ Statement = (*BlockStatement)(nil)
 
 func (bs *BlockStatement) _stmtNode(){}
-func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
 func (bs *BlockStatement) String() string {
     var out bytes.Buffer
 
@@ -113,11 +111,10 @@ type LetStatement struct {
 var _ Statement = (*LetStatement)(nil)
 
 func (ls *LetStatement) _stmtNode(){}
-func (ls *LetStatement) TokenLiteral() string { return ls.Token.Literal }
 func (ls *LetStatement) String() string {
     var out bytes.Buffer
 
-    out.WriteString(ls.TokenLiteral() + " ")
+    out.WriteString(ls.Token.Literal + " ")
     out.WriteString(ls.Name.String())
     out.WriteString(" = ")
 
@@ -136,11 +133,10 @@ type ReturnStatement struct {
 var _ Statement = (*ReturnStatement)(nil)
 
 func (rs *ReturnStatement) _stmtNode(){}
-func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
 func (rs *ReturnStatement) String() string {
     var out bytes.Buffer
 
-    out.WriteString(rs.TokenLiteral() + " ")
+    out.WriteString(rs.Token.Literal + " ")
 
     if rs.Value != nil { // temp. nil check
         out.WriteString(rs.Value.String())
@@ -157,7 +153,6 @@ type ExpressionStatement struct {
 var _ Statement = (*ExpressionStatement)(nil);
 
 func (es *ExpressionStatement) _stmtNode(){}
-func (es *ExpressionStatement) TokenLiteral() string { return es.Token.Literal }
 func (es *ExpressionStatement) String() string {
     var out bytes.Buffer
 
@@ -176,7 +171,6 @@ type Identifier struct {
 var _ Expression = (*Identifier)(nil)
 
 func (i *Identifier) _exprNode(){}
-func (i *Identifier) TokenLiteral() string { return i.Token.Literal }
 func (i *Identifier) String() string { return i.Value }
 
 type IntegerLiteral struct {
@@ -186,7 +180,6 @@ type IntegerLiteral struct {
 var _ Expression = (*IntegerLiteral)(nil)
 
 func (il *IntegerLiteral) _exprNode(){}
-func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
 func (il *IntegerLiteral) String() string { return il.Token.Literal }
 
 type BooleanLiteral struct {
@@ -196,7 +189,6 @@ type BooleanLiteral struct {
 var _ Expression = (*BooleanLiteral)(nil)
 
 func (b *BooleanLiteral) _exprNode(){}
-func (b *BooleanLiteral) TokenLiteral() string { return b.Token.Literal }
 func (b *BooleanLiteral) String() string { return b.Token.Literal }
 
 type PrefixExpression struct {
@@ -207,7 +199,6 @@ type PrefixExpression struct {
 var _ Expression = (*PrefixExpression)(nil)
 
 func (pe *PrefixExpression) _exprNode(){}
-func (pe *PrefixExpression) TokenLiteral() string { return pe.Token.Literal }
 func (pe *PrefixExpression) String() string {
     var out bytes.Buffer
 
@@ -228,7 +219,6 @@ type InfixExpression struct {
 var _ Expression = (*InfixExpression)(nil)
 
 func (ie *InfixExpression) _exprNode(){}
-func (ie *InfixExpression) TokenLiteral() string { return ie.Token.Literal }
 func (ie *InfixExpression) String() string {
     var out bytes.Buffer
 
@@ -250,7 +240,6 @@ type ConditionalExpression struct {
 var _ Expression = (*ConditionalExpression)(nil)
 
 func (ce *ConditionalExpression) _exprNode(){}
-func (ce *ConditionalExpression) TokenLiteral() string { return ce.Token.Literal }
 func (ce *ConditionalExpression) String() string {
     var out bytes.Buffer
 
@@ -275,7 +264,6 @@ type FunctionLiteral struct {
 var _ Expression = (*FunctionLiteral)(nil)
 
 func (fl *FunctionLiteral) _exprNode(){}
-func (fl *FunctionLiteral) TokenLiteral() string { return fl.Token.Literal }
 func (fl *FunctionLiteral) String() string {
     var out bytes.Buffer
 
@@ -300,7 +288,6 @@ type CallExpression struct {
 }
 
 func (ce *CallExpression) _exprNode(){}
-func (ce *CallExpression) TokenLiteral() string { return ce.Token.Literal }
 func (ce *CallExpression) String() string {
     var out bytes.Buffer
 
