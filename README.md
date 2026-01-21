@@ -1,26 +1,19 @@
 # Lemur
 
-Lemur is a simple programming language adapted from Thorsten Ball's [Writing an Interpreter in Go](https://interpreterbook.com/).
+Lemur is an interpreted language in early development, adapted from Thorsten Ball's [Writing an Interpreter in Go](https://interpreterbook.com/). It currently consists of a handwritten lexer and parser.
 
-### Syntax features
+The language currently supports the following features:
+- integer, boolean, and string literals
+- basic arithmentic operations
+- variable assignment with implicit typing
+- if/else expressions
+- first class functions
 
-Declaring variables:
+Syntax sample:
 ```
-let a = 5;
-```
+let a = 5
+let b = a * 2
 
-Conditionals:
-```
-if a < b {
-  return a
-} else {
-  return b
-}
-```
-
-First-class functions:
-```
-let f = fn(a, b) {
-  a + b;
-}
+let max = fn(x, y) { if x > y { x } else { y } }
+let c = max(a, b)
 ```
