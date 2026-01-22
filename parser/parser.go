@@ -190,6 +190,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
     for !p.curTokenIs(token.Semicolon) && precedence < p.curPrecedence() {
         infix := p.infixParseFns[p.curToken.Type]
         if infix == nil {
+            p.noInfixParseFnError()
             return exp
         }
 
@@ -376,6 +377,10 @@ func (p *Parser) expectError(tt token.TokenType) {
 
 func (p *Parser) noPrefixParseFnError() {
     p.raiseError(fmt.Sprintf("no prefix parse function found for '%s'", p.curToken.Type))
+}
+
+func (p *Parser) noInfixParseFnError() {
+    p.raiseError(fmt.Sprintf("no infix parse function found for '%s'", p.curToken.Type))
 }
 
 func (p *Parser) raiseError(msg string) {
