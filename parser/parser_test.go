@@ -387,4 +387,3 @@ func assertCast[T ast.Node](t *testing.T, node ast.Node) T {
 
     return n
 }
-

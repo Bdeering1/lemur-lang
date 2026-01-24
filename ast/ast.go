@@ -25,11 +25,12 @@ type Expression interface {
 
 
 type Program []Statement
+var _ Node = (Program)(nil)
 
-func (p *Program) String() string {
+func (p Program) String() string {
     var out bytes.Buffer
 
-    for _, s := range *p {
+    for _, s := range p {
         out.WriteString(s.String())
     }
     return out.String()
