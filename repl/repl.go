@@ -113,7 +113,7 @@ func evaluate(input string) {
 
     evaluated := eval.Eval(program)
     if evaluated == nil { return }
-    fmt.Println(evaluated.Inspect())
+    fmt.Println(evaluated.String())
 }
 
 func printParserErrors(errors []string) {

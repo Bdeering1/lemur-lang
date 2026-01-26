@@ -8,19 +8,59 @@ import (
     "lemur/object"
 )
 
+func TestBangOperator(t *testing.T) {
+    tests := []struct {
+        input    string
+        expected bool
+    }{
+        {"!true", false},
+        {"!false", true},
+        {"!!false", false},
+        {"!!true", true},
+    }
+
+    for _, tst := range tests {
+        e := runNewEval(tst.input)
+
+        res := assertCast[*object.Boolean](t, e)
+        assert(t, res.Value, tst.expected)
+    }
+}
+
 func TestEvalIntegerExpression(t *testing.T) {
     tests := []struct {
         input    string
         expected int64
     }{
         {"0", 0},
-        {"15", 15},
+        {"5", 5},
+        {"10", 10},
+        {"-0", 0},
+        {"-5", -5},
+        {"-10", -10},
     }
 
     for _, tst := range tests {
         e := runNewEval(tst.input)
 
         res := assertCast[*object.Integer](t, e)
+        assert(t, res.Value, tst.expected)
+    }
+}
+
+func TestEvalBooleanExpression(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected bool
+    }{
+        {"true", true},
+        {"false", false},
+    }
+
+    for _, tst := range tests {
+        e := runNewEval(tst.input)
+
+        res := assertCast[*object.Boolean](t, e)
         assert(t, res.Value, tst.expected)
     }
 }
@@ -35,7 +75,9 @@ func runNewEval(input string) object.Object {
 
 func assert(t *testing.T, val any, expected any) {
     if val != expected {
-        t.Errorf("incorrect object value, expected %v (got %v)", expected, val)
+        t.Errorf("incorrect object value, expected %T: %v (got %T: %v)",
+            expected, expected,
+            val, val)
     }
 }
 
