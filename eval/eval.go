@@ -36,7 +36,7 @@ func Eval(node ast.Node) object.Object {
         return &object.Integer{Value: node.Value}
 
     case *ast.BooleanLiteral:
-        if node.Value { return True } else { return False }
+        return createBooleanObject(node.Value)
     }
 
     return nil
@@ -53,11 +53,15 @@ func evalBlock(block []ast.Statement) object.Object {
 }
 
 func evalInfixExpression(operator string, left, right object.Object) object.Object {
+    if left.Type() != right.Type() { return Null } // raise error
+
     switch {
-    case left.Type() == object.IntegerType && right.Type() == object.IntegerType:
+    case left.Type() == object.IntegerType:
         return evalIntegerInfixExpression(operator, left, right)
+    case left.Type() == object.BooleanType:
+        return evalBooleanInfixExpression(operator, left, right)
     default:
-        return Null
+        return Null // raise error
     }
 }
 
@@ -74,6 +78,25 @@ func evalIntegerInfixExpression(operator string, left, right object.Object) obje
         return &object.Integer{Value: leftVal * rightVal}
     case "/":
         return &object.Integer{Value: leftVal / rightVal}
+    case "<":
+        return createBooleanObject(leftVal < rightVal)
+    case ">":
+        return createBooleanObject(leftVal > rightVal)
+    case "==":
+        return createBooleanObject(leftVal == rightVal)
+    case "!=":
+        return createBooleanObject(leftVal != rightVal)
+    default:
+        return Null // raise error
+    }
+}
+
+func evalBooleanInfixExpression(operator string, left, right object.Object) object.Object {
+    switch operator {
+    case "==":
+        return createBooleanObject(left == right)
+    case "!=":
+        return createBooleanObject(left != right)
     default:
         return Null
     }
@@ -86,7 +109,7 @@ func evalPrefixOperator(operator string, right object.Object) object.Object {
     case "-":
         return evalMinusPrefix(right)        
     default:
-        return Null
+        return Null // raise error
     }
 }
 
@@ -106,4 +129,8 @@ func evalMinusPrefix(right object.Object) object.Object {
     
     val := right.(*object.Integer).Value
     return &object.Integer{Value: -val}
+}
+
+func createBooleanObject(val bool) object.Object{
+    if val { return True } else { return False }
 }

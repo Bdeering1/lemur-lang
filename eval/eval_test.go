@@ -8,25 +8,6 @@ import (
     "lemur/object"
 )
 
-func TestBangOperator(t *testing.T) {
-    tests := []struct {
-        input    string
-        expected bool
-    }{
-        {"!true", false},
-        {"!false", true},
-        {"!!false", false},
-        {"!!true", true},
-    }
-
-    for _, tst := range tests {
-        e := runNewEval(tst.input)
-
-        res := assertCast[*object.Boolean](t, e)
-        assert(t, res.Value, tst.expected)
-    }
-}
-
 func TestEvalIntegerExpression(t *testing.T) {
     tests := []struct {
         input    string
@@ -48,11 +29,11 @@ func TestEvalIntegerExpression(t *testing.T) {
         {"10 + 5 * 2", 20},
     }
 
-    for _, tst := range tests {
+    for i, tst := range tests {
         e := runNewEval(tst.input)
 
         res := assertCast[*object.Integer](t, e)
-        assert(t, res.Value, tst.expected)
+        assert(t, i, res.Value, tst.expected)
     }
 }
 
@@ -63,13 +44,34 @@ func TestEvalBooleanExpression(t *testing.T) {
     }{
         {"true", true},
         {"false", false},
+        {"!true", false},
+        {"!false", true},
+        {"!!false", false},
+        {"!!true", true},
+        {"true == true", true},
+        {"false == false", true},
+        {"true == false", false},
+        {"true != false", true},
+        {"false != true", true},
+        {"1 < 2", true},
+        {"1 > 2", false},
+        {"1 < 1", false},
+        {"1 > 1", false},
+        {"1 == 1", true},
+        {"1 != 1", false},
+        {"1 == 2", false},
+        {"1 != 2", true},
+        {"(1 < 2) == true", true},
+        {"(1 < 2) == false", false},
+        {"(1 > 2) == true", false},
+        {"(1 > 2) == false", true},
     }
 
-    for _, tst := range tests {
+    for i, tst := range tests {
         e := runNewEval(tst.input)
 
         res := assertCast[*object.Boolean](t, e)
-        assert(t, res.Value, tst.expected)
+        assert(t, i, res.Value, tst.expected)
     }
 }
 
@@ -81,9 +83,10 @@ func runNewEval(input string) object.Object {
     return Eval(program)
 }
 
-func assert(t *testing.T, val any, expected any) {
+func assert(t *testing.T, testIdx int, val any, expected any) {
     if val != expected {
-        t.Errorf("incorrect object value, expected %T: %v (got %T: %v)",
+        t.Errorf("incorrect object value for test %d, expected %T: %v (got %T: %v)",
+            testIdx + 1,
             expected, expected,
             val, val)
     }
