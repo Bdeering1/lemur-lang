@@ -8,6 +8,32 @@ import (
     "lemur/object"
 )
 
+func TestEvalConditionalExpression(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected any
+    }{
+        {"if true { 10 }", 10},
+        {"if false { 10 }", nil},
+        {"if 1 < 2 { 10 }", 10},
+        {"if 1 > 2 { 10 }", nil},
+        {"if true { 10 } else { 20 }", 10},
+        {"if false { 10 } else { 20 }", 20},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+        expd, ok := tst.expected.(int)
+
+        if !ok {
+            assert(t, i, obj, Null)
+            continue
+        }
+        res := assertCast[*object.Integer](t, obj)
+        assert(t, i, res.Value, int64(expd))
+    }
+}
+
 func TestEvalIntegerExpression(t *testing.T) {
     tests := []struct {
         input    string
@@ -30,9 +56,9 @@ func TestEvalIntegerExpression(t *testing.T) {
     }
 
     for i, tst := range tests {
-        e := runNewEval(tst.input)
+        obj := runNewEval(tst.input)
 
-        res := assertCast[*object.Integer](t, e)
+        res := assertCast[*object.Integer](t, obj)
         assert(t, i, res.Value, tst.expected)
     }
 }
@@ -68,9 +94,9 @@ func TestEvalBooleanExpression(t *testing.T) {
     }
 
     for i, tst := range tests {
-        e := runNewEval(tst.input)
+        obj := runNewEval(tst.input)
 
-        res := assertCast[*object.Boolean](t, e)
+        res := assertCast[*object.Boolean](t, obj)
         assert(t, i, res.Value, tst.expected)
     }
 }

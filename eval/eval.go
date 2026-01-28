@@ -23,6 +23,9 @@ func Eval(node ast.Node) object.Object {
     case *ast.ExpressionStatement:
         return Eval(node.Value)
 
+    case *ast.ConditionalExpression:
+        return evalConditionalExpression(node)
+
     case *ast.InfixExpression:
         left := Eval(node.Left)
         right := Eval(node.Right)
@@ -50,6 +53,15 @@ func evalBlock(block []ast.Statement) object.Object {
     }
 
     return res
+}
+
+func evalConditionalExpression(ce *ast.ConditionalExpression) object.Object {
+    cond := Eval(ce.Condition)
+
+    if cond == True { return Eval(ce.Consequence) }
+    if cond == False && ce.Alternative != nil { return Eval(ce.Alternative) }
+
+    return Null
 }
 
 func evalInfixExpression(operator string, left, right object.Object) object.Object {
