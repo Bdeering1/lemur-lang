@@ -8,7 +8,30 @@ import (
     "lemur/object"
 )
 
-func TestEvalConditionalExpression(t *testing.T) {
+func TestReturnStatement(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected int64
+    }{
+        {"return 10", 10},
+        {"return 10; 9", 10},
+        {"return 2 * 5; 9", 10},
+        {"8; return 2 * 5; 9", 10},
+        {"{ return 10; }", 10},
+        {"{ return 10; 9 }", 10},
+        {"{{ return 10; 9 } 8 }", 10},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+
+        ret := assertCast[*object.Return](t, obj)
+        n := assertCast[*object.Integer](t, ret.Value)
+        assert(t, i, n.Value, tst.expected)
+    }
+}
+
+func TestConditionalExpression(t *testing.T) {
     tests := []struct{
         input    string
         expected any
@@ -34,7 +57,7 @@ func TestEvalConditionalExpression(t *testing.T) {
     }
 }
 
-func TestEvalIntegerExpression(t *testing.T) {
+func TestIntegerExpression(t *testing.T) {
     tests := []struct {
         input    string
         expected int64
@@ -63,7 +86,7 @@ func TestEvalIntegerExpression(t *testing.T) {
     }
 }
 
-func TestEvalBooleanExpression(t *testing.T) {
+func TestBooleanExpression(t *testing.T) {
     tests := []struct{
         input    string
         expected bool

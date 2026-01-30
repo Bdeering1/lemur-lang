@@ -13,6 +13,7 @@ const (
     IntegerType = "Integer"
     BooleanType = "Boolean"
     NullType    = "Null"
+    ReturnType  = "Return"
 )
 
 type Integer struct {
@@ -35,3 +36,10 @@ type Null struct { // replace with sum type (option)?
 
 func (b *Null) Type() ObjectType { return NullType }
 func (b *Null) String() string { return "null" }
+
+type Return struct {
+    Value Object
+}
+
+func (r *Return) Type() ObjectType { return ReturnType }
+func (r *Return) String() string { return r.Value.String() }
