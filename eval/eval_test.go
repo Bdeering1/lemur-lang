@@ -8,6 +8,31 @@ import (
     "lemur/object"
 )
 
+func TestErrorCases(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected string
+    }{
+        {"!1", UnknownOperatorError + ": " + "!Integer"},
+        {"!1; 2", UnknownOperatorError + ": " + "!Integer"},
+        {"-true", UnknownOperatorError + ": " + "-Boolean"},
+        {"-true; 2", UnknownOperatorError + ": " + "-Boolean"},
+        {"true + true", UnknownOperatorError + ": " + "Boolean + Boolean"},
+        {"true + true; 2", UnknownOperatorError + ": " + "Boolean + Boolean"},
+        {"1 + true", TypeMismatchError + ": " + "Integer + Boolean"},
+        {"true + 1", TypeMismatchError + ": " + "Boolean + Integer"},
+        {"1 + true; 2", TypeMismatchError + ": " + "Integer + Boolean"},
+        {"if 1 + 1 { 2 }", InvalidConditionError + ": " + "(1 + 1)"},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+
+        res := assertCast[*object.Error](t, i, obj)
+        assert(t, i, res.Message, tst.expected)
+    }
+}
+
 func TestReturnStatement(t *testing.T) {
     tests := []struct{
         input    string
@@ -25,8 +50,8 @@ func TestReturnStatement(t *testing.T) {
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        ret := assertCast[*object.Return](t, obj)
-        n := assertCast[*object.Integer](t, ret.Value)
+        ret := assertCast[*object.Return](t, i, obj)
+        n := assertCast[*object.Integer](t, i, ret.Value)
         assert(t, i, n.Value, tst.expected)
     }
 }
@@ -52,7 +77,7 @@ func TestConditionalExpression(t *testing.T) {
             assert(t, i, obj, Null)
             continue
         }
-        res := assertCast[*object.Integer](t, obj)
+        res := assertCast[*object.Integer](t, i, obj)
         assert(t, i, res.Value, int64(expd))
     }
 }
@@ -81,7 +106,7 @@ func TestIntegerExpression(t *testing.T) {
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        res := assertCast[*object.Integer](t, obj)
+        res := assertCast[*object.Integer](t, i, obj)
         assert(t, i, res.Value, tst.expected)
     }
 }
@@ -119,7 +144,7 @@ func TestBooleanExpression(t *testing.T) {
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        res := assertCast[*object.Boolean](t, obj)
+        res := assertCast[*object.Boolean](t, i, obj)
         assert(t, i, res.Value, tst.expected)
     }
 }
@@ -134,17 +159,17 @@ func runNewEval(input string) object.Object {
 
 func assert(t *testing.T, testIdx int, val any, expected any) {
     if val != expected {
-        t.Errorf("incorrect object value for test %d, expected %T: %v (got %T: %v)",
+        t.Errorf("test %d: incorrect object value, expected %T: %v (got %T: %v)",
             testIdx + 1,
             expected, expected,
             val, val)
     }
 }
 
-func assertCast[T object.Object](t *testing.T, obj object.Object) T {
+func assertCast[T object.Object](t *testing.T, testIdx int, obj object.Object) T {
     o, ok := obj.(T)
     if !ok {
-        t.Fatalf("object is not an %T (got %T)", *new(T), obj)
+        t.Fatalf("test %d: object is not an %T (got %T)", testIdx + 1, *new(T), obj)
     }
 
     return o

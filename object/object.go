@@ -14,6 +14,7 @@ const (
     BooleanType = "Boolean"
     NullType    = "Null"
     ReturnType  = "Return"
+    ErrorType   = "Error"
 )
 
 type Integer struct {
@@ -43,3 +44,10 @@ type Return struct {
 
 func (r *Return) Type() ObjectType { return ReturnType }
 func (r *Return) String() string { return r.Value.String() }
+
+type Error struct { // attach token info to this
+    Message string
+}
+
+func (e *Error) Type() ObjectType { return ErrorType }
+func (e *Error) String() string { return "Error: " + e.Message }

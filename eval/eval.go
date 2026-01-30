@@ -1,8 +1,18 @@
 package eval
 
 import (
+    "fmt"
+
     "lemur/ast"
     "lemur/object"
+)
+
+const (
+    InfixNotImplementedError = "no infixes implemented for type"
+    InvalidConditionError = "invalid condition"
+    TypeMismatchError = "type mismatch"
+    UnknownOperatorError = "unknown operator"
+    InternalErrorPostfix = " (internal)"
 )
 
 var (
@@ -53,7 +63,7 @@ func evalBlock(block []ast.Statement) object.Object {
     for _, stmt := range block {
         obj = Eval(stmt)
 
-        if ret, ok := obj.(*object.Return); ok { return ret }
+        if obj.Type() == object.ErrorType || obj.Type() == object.ReturnType { return obj }
     }
 
     return obj
@@ -63,13 +73,18 @@ func evalConditionalExpression(ce *ast.ConditionalExpression) object.Object {
     cond := Eval(ce.Condition)
 
     if cond == True { return Eval(ce.Consequence) }
-    if cond == False && ce.Alternative != nil { return Eval(ce.Alternative) }
+    if cond == False {
+        if ce.Alternative == nil { return Null } // or default value for type
+        return Eval(ce.Alternative)
+    }
 
-    return Null
+    return createError(InvalidConditionError, "%s", ce.Condition)
 }
 
 func evalInfixExpression(operator string, left, right object.Object) object.Object {
-    if left.Type() != right.Type() { return Null } // raise error
+    if left.Type() != right.Type() {
+        return createError(TypeMismatchError, "%s %s %s", left.Type(), operator, right.Type())
+    }
 
     switch {
     case left.Type() == object.IntegerType:
@@ -77,7 +92,7 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
     case left.Type() == object.BooleanType:
         return evalBooleanInfixExpression(operator, left, right)
     default:
-        return Null // raise error
+        return createError(InfixNotImplementedError, "%s", left.Type())
     }
 }
 
@@ -103,7 +118,7 @@ func evalIntegerInfixExpression(operator string, left, right object.Object) obje
     case "!=":
         return createBooleanObject(leftVal != rightVal)
     default:
-        return Null // raise error
+        return createError(UnknownOperatorError, "%s %s %s", left.Type(), operator, right.Type())
     }
 }
 
@@ -114,7 +129,7 @@ func evalBooleanInfixExpression(operator string, left, right object.Object) obje
     case "!=":
         return createBooleanObject(left != right)
     default:
-        return Null
+        return createError(UnknownOperatorError, "%s %s %s", left.Type(), operator, right.Type())
     }
 }
 
@@ -125,7 +140,7 @@ func evalPrefixOperator(operator string, right object.Object) object.Object {
     case "-":
         return evalMinusPrefix(right)        
     default:
-        return Null // raise error
+        return createError(UnknownOperatorError + InternalErrorPostfix, "%s%s", operator, right.Type())
     }
 }
 
@@ -136,12 +151,14 @@ func evalBangPrefix(right object.Object) object.Object {
     case False:
         return True
     default:
-        return Null // raise error
+        return createError(UnknownOperatorError, "!%s", right.Type())
     }
 }
 
 func evalMinusPrefix(right object.Object) object.Object {
-    if right.Type() != object.IntegerType { return Null } // raise error
+    if right.Type() != object.IntegerType {
+        return createError(UnknownOperatorError, "-%s", right.Type())
+    }
     
     val := right.(*object.Integer).Value
     return &object.Integer{Value: -val}
@@ -149,4 +166,8 @@ func evalMinusPrefix(right object.Object) object.Object {
 
 func createBooleanObject(val bool) object.Object{
     if val { return True } else { return False }
+}
+
+func createError(errKind string, msg string, args ...any) *object.Error {
+    return &object.Error{Message: errKind + ": " + fmt.Sprintf(msg, args...)}
 }
