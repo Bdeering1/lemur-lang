@@ -3,7 +3,7 @@
 Lemur is an interpreted language in early development, adapted from Thorsten Ball's [Writing an Interpreter in Go](https://interpreterbook.com/). It currently consists of a handwritten lexer and parser.
 
 The language currently supports the following features:
-- integer, boolean, and string literals
+- integer and boolean literals
 - basic arithmentic operations
 - variable assignment with implicit typing
 - if/else expressions
