@@ -21,6 +21,10 @@ func TestErrorCases(t *testing.T) {
         {"true + true; 2", UnknownOperatorError + ": " + "Boolean + Boolean"},
         {"1 + true", TypeMismatchError + ": " + "Integer + Boolean"},
         {"true + 1", TypeMismatchError + ": " + "Boolean + Integer"},
+        {"!(true + 1)", TypeMismatchError + ": " + "Boolean + Integer"},
+        {"(true + 1) * (5 + 5)", TypeMismatchError + ": " + "Boolean + Integer"},
+        {"if true + 1 { 2 }", TypeMismatchError + ": " + "Boolean + Integer"},
+        {"return true + 1", TypeMismatchError + ": " + "Boolean + Integer"},
         {"1 + true; 2", TypeMismatchError + ": " + "Integer + Boolean"},
         {"if 1 + 1 { 2 }", InvalidConditionError + ": " + "(1 + 1)"},
     }

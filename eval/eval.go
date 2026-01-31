@@ -31,7 +31,10 @@ func Eval(node ast.Node) object.Object {
         return evalBlock(node.Statements)
 
     case *ast.ReturnStatement:
-        return &object.Return{Value: Eval(node.Value)}
+        obj := Eval(node.Value)
+        if isError(obj) { return obj }
+
+        return &object.Return{Value: obj}
 
     case *ast.ExpressionStatement:
         return Eval(node.Value)
@@ -41,11 +44,18 @@ func Eval(node ast.Node) object.Object {
 
     case *ast.InfixExpression:
         left := Eval(node.Left)
+        if isError(left) { return left }
+
         right := Eval(node.Right)
+        if isError(right) { return right }
+
         return evalInfixExpression(node.Operator, left, right)
 
     case *ast.PrefixExpression:
-        return evalPrefixOperator(node.Operator, Eval(node.Right))
+        right := Eval(node.Right)
+        if isError(right) { return right }
+
+        return evalPrefixOperator(node.Operator, right)
         
     case *ast.IntegerLiteral:
         return &object.Integer{Value: node.Value}
@@ -71,6 +81,7 @@ func evalBlock(block []ast.Statement) object.Object {
 
 func evalConditionalExpression(ce *ast.ConditionalExpression) object.Object {
     cond := Eval(ce.Condition)
+    if isError(cond) { return cond }
 
     if cond == True { return Eval(ce.Consequence) }
     if cond == False {
@@ -171,3 +182,5 @@ func createBooleanObject(val bool) object.Object{
 func createError(errKind string, msg string, args ...any) *object.Error {
     return &object.Error{Message: errKind + ": " + fmt.Sprintf(msg, args...)}
 }
+
+func isError(obj object.Object) bool { return obj.Type() == object.ErrorType }
