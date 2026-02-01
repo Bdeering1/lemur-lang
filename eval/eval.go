@@ -8,6 +8,7 @@ import (
 )
 
 const (
+    IdentifierNotFoundError = "identifier not found"
     InfixNotImplementedError = "no infixes implemented for type"
     InvalidConditionError = "invalid condition"
     TypeMismatchError = "type mismatch"
@@ -21,42 +22,55 @@ var (
     Null = &object.Null{}
 )
 
-func Eval(node ast.Node) object.Object {
+func Eval(node ast.Node, env *object.Environment) object.Object {
     switch node := node.(type) {
 
     case ast.Program:
-        return evalBlock(node)
+        return evalBlock(node, env)
 
     case *ast.BlockStatement:
-        return evalBlock(node.Statements)
+        return evalBlock(node.Statements, env)
+
+    case *ast.LetStatement:
+        obj := Eval(node.Value, env)
+        if isError(obj) { return obj }
+
+        (*env)[node.Name.Value] = obj
+        return obj
 
     case *ast.ReturnStatement:
-        obj := Eval(node.Value)
+        obj := Eval(node.Value, env)
         if isError(obj) { return obj }
 
         return &object.Return{Value: obj}
 
     case *ast.ExpressionStatement:
-        return Eval(node.Value)
+        return Eval(node.Value, env)
 
     case *ast.ConditionalExpression:
-        return evalConditionalExpression(node)
+        return evalConditionalExpression(node, env)
 
     case *ast.InfixExpression:
-        left := Eval(node.Left)
+        left := Eval(node.Left, env)
         if isError(left) { return left }
 
-        right := Eval(node.Right)
+        right := Eval(node.Right, env)
         if isError(right) { return right }
 
         return evalInfixExpression(node.Operator, left, right)
 
     case *ast.PrefixExpression:
-        right := Eval(node.Right)
+        right := Eval(node.Right, env)
         if isError(right) { return right }
 
         return evalPrefixOperator(node.Operator, right)
         
+    case *ast.Identifier:
+        obj, ok := (*env)[node.Value]
+        if !ok { return createError(IdentifierNotFoundError, "%s", node.Value) }
+
+        return obj
+
     case *ast.IntegerLiteral:
         return &object.Integer{Value: node.Value}
 
@@ -64,14 +78,14 @@ func Eval(node ast.Node) object.Object {
         return createBooleanObject(node.Value)
     }
 
-    return nil
+    return Null
 }
 
-func evalBlock(block []ast.Statement) object.Object {
+func evalBlock(block []ast.Statement, env *object.Environment) object.Object {
     var obj object.Object
 
     for _, stmt := range block {
-        obj = Eval(stmt)
+        obj = Eval(stmt, env)
 
         if obj.Type() == object.ErrorType || obj.Type() == object.ReturnType { return obj }
     }
@@ -79,14 +93,14 @@ func evalBlock(block []ast.Statement) object.Object {
     return obj
 }
 
-func evalConditionalExpression(ce *ast.ConditionalExpression) object.Object {
-    cond := Eval(ce.Condition)
+func evalConditionalExpression(ce *ast.ConditionalExpression, env *object.Environment) object.Object {
+    cond := Eval(ce.Condition, env)
     if isError(cond) { return cond }
 
-    if cond == True { return Eval(ce.Consequence) }
+    if cond == True { return Eval(ce.Consequence, env) }
     if cond == False {
         if ce.Alternative == nil { return Null } // or default value for type
-        return Eval(ce.Alternative)
+        return Eval(ce.Alternative, env)
     }
 
     return createError(InvalidConditionError, "%s", ce.Condition)

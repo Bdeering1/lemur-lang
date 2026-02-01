@@ -8,6 +8,7 @@ import (
 
     "lemur/eval"
     "lemur/lexer"
+    "lemur/object"
     "lemur/parser"
     "lemur/token"
 )
@@ -32,6 +33,8 @@ func Start(in io.Reader, out io.Writer) {
 
     mode := None
     scanner := bufio.NewScanner(in)
+    env := object.CreateEnvironment()
+
     for {
         res := prompt(scanner)
         if res == "" || res == "q" || res == "quit" { break }
@@ -63,7 +66,7 @@ func Start(in io.Reader, out io.Writer) {
         } else if mode == Parser {
             parse(res, false)
         } else {
-            evaluate(res)
+            evaluate(res, env)
         }
     }
 
@@ -100,7 +103,7 @@ func parse(input string, stringify bool) {
     printParserErrors(p.Errors())
 }
 
-func evaluate(input string) {
+func evaluate(input string, env *object.Environment) {
     input = input + "\x00"
     l := lexer.New(input)
     p := parser.New(l)
@@ -111,15 +114,13 @@ func evaluate(input string) {
         return
     }
 
-    evaluated := eval.Eval(program)
-    if evaluated == nil { return }
+    evaluated := eval.Eval(program, env)
     fmt.Println(evaluated.String())
 }
 
 func printParserErrors(errors []string) {
-    fmt.Printf("%d parser errors:\n", len(errors))
+    fmt.Printf("Failed to parse (%d errors):\n", len(errors))
     for _, msg := range errors {
-        fmt.Printf("\t%q\n", msg)
+        fmt.Printf("  Error: %s\n", msg)
     }
-    fmt.Println()
 }

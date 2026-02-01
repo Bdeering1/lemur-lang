@@ -8,32 +8,23 @@ import (
     "lemur/object"
 )
 
-func TestErrorCases(t *testing.T) {
+func TestLetStatement(t *testing.T) {
     tests := []struct{
         input    string
-        expected string
+        expected int64
     }{
-        {"!1", UnknownOperatorError + ": " + "!Integer"},
-        {"!1; 2", UnknownOperatorError + ": " + "!Integer"},
-        {"-true", UnknownOperatorError + ": " + "-Boolean"},
-        {"-true; 2", UnknownOperatorError + ": " + "-Boolean"},
-        {"true + true", UnknownOperatorError + ": " + "Boolean + Boolean"},
-        {"true + true; 2", UnknownOperatorError + ": " + "Boolean + Boolean"},
-        {"1 + true", TypeMismatchError + ": " + "Integer + Boolean"},
-        {"true + 1", TypeMismatchError + ": " + "Boolean + Integer"},
-        {"!(true + 1)", TypeMismatchError + ": " + "Boolean + Integer"},
-        {"(true + 1) * (5 + 5)", TypeMismatchError + ": " + "Boolean + Integer"},
-        {"if true + 1 { 2 }", TypeMismatchError + ": " + "Boolean + Integer"},
-        {"return true + 1", TypeMismatchError + ": " + "Boolean + Integer"},
-        {"1 + true; 2", TypeMismatchError + ": " + "Integer + Boolean"},
-        {"if 1 + 1 { 2 }", InvalidConditionError + ": " + "(1 + 1)"},
+        {"let a = 5; a", 5},
+        {"let a = 2 + 3; a", 5},
+        {"let a = 5; let b = a; b", 5},
+        {"let a = 2; let b = 3; a + b", 5},
     }
+
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        res := assertCast[*object.Error](t, i, obj)
-        assert(t, i, res.Message, tst.expected)
+        res := assertCast[*object.Integer](t, i, obj)
+        assert(t, i, res.Value, tst.expected)
     }
 }
 
@@ -153,12 +144,46 @@ func TestBooleanExpression(t *testing.T) {
     }
 }
 
+func TestErrorCases(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected string
+    }{
+        {"!1", UnknownOperatorError + ": " + "!Integer"},
+        {"!1; 2", UnknownOperatorError + ": " + "!Integer"},
+        {"-true", UnknownOperatorError + ": " + "-Boolean"},
+        {"-true; 2", UnknownOperatorError + ": " + "-Boolean"},
+        {"true + true", UnknownOperatorError + ": " + "Boolean + Boolean"},
+        {"true + true; 2", UnknownOperatorError + ": " + "Boolean + Boolean"},
+        {"1 + true", TypeMismatchError + ": " + "Integer + Boolean"},
+        {"true + 1", TypeMismatchError + ": " + "Boolean + Integer"},
+        {"!(true + 1)", TypeMismatchError + ": " + "Boolean + Integer"},
+        {"(true + 1) * (5 + 5)", TypeMismatchError + ": " + "Boolean + Integer"},
+        {"if true + 1 { 2 }", TypeMismatchError + ": " + "Boolean + Integer"},
+        {"return true + 1", TypeMismatchError + ": " + "Boolean + Integer"},
+        {"1 + true; 2", TypeMismatchError + ": " + "Integer + Boolean"},
+        {"if 1 + 1 { 2 }", InvalidConditionError + ": " + "(1 + 1)"},
+        {"x", IdentifierNotFoundError + ": " + "x"},
+        {"!x", IdentifierNotFoundError + ": " + "x"},
+        {"if x { y }", IdentifierNotFoundError + ": " + "x"},
+        {"return x", IdentifierNotFoundError + ": " + "x"},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+
+        res := assertCast[*object.Error](t, i, obj)
+        assert(t, i, res.Message, tst.expected)
+    }
+}
+
 func runNewEval(input string) object.Object {
     l := lexer.New(input)
     p := parser.New(l)
     program := p.ParseProgram()
+    env := object.CreateEnvironment()
 
-    return Eval(program)
+    return Eval(program, env)
 }
 
 func assert(t *testing.T, testIdx int, val any, expected any) {
