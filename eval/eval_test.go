@@ -81,6 +81,26 @@ func TestFunctionExpression(t *testing.T) {
     }
 }
 
+func TestCallExpression(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected int64
+    }{
+        {"let identity = fn(x) { x }; identity(5)", 5},
+        {"let identity = fn(x) { return x }; identity(5)", 5},
+        {"let double = fn(x) { x * 2 }; double(1)", 2},
+        {"let add = fn(x, y) { x + y }; add(2, 3)", 5},
+        {"let max = fn(x, y) { if x > y { x } else { y } }; max(1, 5)", 5},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+
+        res := assertCast[*object.Integer](t, i, obj)
+        assert(t, i, res.Value, tst.expected)
+    }
+}
+
 func TestConditionalExpression(t *testing.T) {
     tests := []struct{
         input    string
@@ -96,12 +116,13 @@ func TestConditionalExpression(t *testing.T) {
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
-        expd, ok := tst.expected.(int)
 
+        expd, ok := tst.expected.(int)
         if !ok {
             assert(t, i, obj, Null)
             continue
         }
+
         res := assertCast[*object.Integer](t, i, obj)
         assert(t, i, res.Value, int64(expd))
     }

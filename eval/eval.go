@@ -8,11 +8,14 @@ import (
 )
 
 const (
+    ArgumentMistmatchError = "wrong arguments for function"
     IdentifierNotFoundError = "identifier not found"
     InfixNotImplementedError = "no infixes implemented for type"
     InvalidConditionError = "invalid condition"
+    InvalidaCastError = "invalid type cast"
     TypeMismatchError = "type mismatch"
     UnknownOperatorError = "unknown operator"
+    UnknownASTNodeError = "unknown AST node"
     InternalErrorPostfix = " (internal)"
 )
 
@@ -35,7 +38,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         obj := Eval(node.Value, env)
         if isError(obj) { return obj }
 
-        (*env)[node.Name.Value] = obj
+        env.Set(node.Name.Value, obj)
         return obj
 
     case *ast.ReturnStatement:
@@ -48,7 +51,30 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         return Eval(node.Value, env)
 
     case *ast.FunctionLiteral:
-        return &object.Function{Parameters: node.Parameters, Body: node.Body, Env: env}
+        return &object.Function{Parameters: node.Parameters, Body: node.Body, OuterEnv: env}
+
+    case *ast.CallExpression:
+        obj := Eval(node.Function, env)
+        if isError(obj) { return obj }
+
+        f, ok := obj.(*object.Function)
+        if !ok {
+            return createError(InvalidaCastError + InternalErrorPostfix,
+                "%T cannot be cast to object.Function", f)
+        }
+        if len(node.Arguments) != len(f.Parameters) {
+            return createError(ArgumentMistmatchError, "%s", node.Function)
+        }
+
+        env := object.CreateEnclosedEnvironment(f.OuterEnv)
+        for i, a := range node.Arguments {
+            o := Eval(a, env)
+            if isError(o) { return o }
+
+            env.Set(f.Parameters[i].Value, o)
+        }
+
+        return unwrapReturn(Eval(f.Body, env))
 
     case *ast.ConditionalExpression:
         return evalConditionalExpression(node, env)
@@ -67,9 +93,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         if isError(right) { return right }
 
         return evalPrefixOperator(node.Operator, right)
-        
+
     case *ast.Identifier:
-        obj, ok := (*env)[node.Value]
+        obj, ok := env.Get(node.Value)
         if !ok { return createError(IdentifierNotFoundError, "%s", node.Value) }
 
         return obj
@@ -81,7 +107,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         return createBooleanObject(node.Value)
     }
 
-    return Null
+    return createError(UnknownASTNodeError + InternalErrorPostfix, "%T", node)
 }
 
 func evalBlock(block []ast.Statement, env *object.Environment) object.Object {
@@ -190,6 +216,11 @@ func evalMinusPrefix(right object.Object) object.Object {
     
     val := right.(*object.Integer).Value
     return &object.Integer{Value: -val}
+}
+
+func unwrapReturn(obj object.Object) object.Object {
+    if ret, ok := obj.(*object.Return); ok { return ret.Value }
+    return obj
 }
 
 func createBooleanObject(val bool) object.Object{

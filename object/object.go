@@ -27,7 +27,7 @@ const (
 type Function struct {
     Parameters []*ast.Identifier
     Body       *ast.BlockStatement
-    Env        *Environment
+    OuterEnv   *Environment
 }
 
 func (f *Function) Type() ObjectType { return IntegerType }
