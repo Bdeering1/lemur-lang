@@ -91,6 +91,7 @@ func TestCallExpression(t *testing.T) {
         {"let double = fn(x) { x * 2 }; double(1)", 2},
         {"let add = fn(x, y) { x + y }; add(2, 3)", 5},
         {"let max = fn(x, y) { if x > y { x } else { y } }; max(1, 5)", 5},
+        {"let fact = fn(n) { if n == 0 { 1 } else { n * fact(n-1) } }; fact(3)", 6},
     }
 
     for i, tst := range tests {

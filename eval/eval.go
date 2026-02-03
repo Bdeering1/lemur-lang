@@ -66,15 +66,15 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
             return createError(ArgumentMistmatchError, "%s", node.Function)
         }
 
-        env := object.CreateEnclosedEnvironment(f.OuterEnv)
+        innerEnv := object.CreateEnclosedEnvironment(f.OuterEnv)
         for i, a := range node.Arguments {
             o := Eval(a, env)
             if isError(o) { return o }
 
-            env.Set(f.Parameters[i].Value, o)
+            innerEnv.Set(f.Parameters[i].Value, o)
         }
 
-        return unwrapReturn(Eval(f.Body, env))
+        return unwrapReturn(Eval(f.Body, innerEnv))
 
     case *ast.ConditionalExpression:
         return evalConditionalExpression(node, env)
