@@ -309,7 +309,7 @@ func testFunctionLiteral(t *testing.T, exp ast.Expression, stmts int, params []s
     f := assertCast[*ast.FunctionLiteral](t, exp)
 
     if len(f.Parameters) != len(params) {
-        t.Fatalf("wrong number of parameters in function literal, should be %d (got %d)",
+        t.Fatalf("wrong number of parameters in function literal, expected %d (got %d)",
             len(params),
             len(f.Parameters))
     }

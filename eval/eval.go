@@ -47,6 +47,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
     case *ast.ExpressionStatement:
         return Eval(node.Value, env)
 
+    case *ast.FunctionLiteral:
+        return &object.Function{Parameters: node.Parameters, Body: node.Body, Env: env}
+
     case *ast.ConditionalExpression:
         return evalConditionalExpression(node, env)
 

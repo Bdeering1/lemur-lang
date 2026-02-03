@@ -51,6 +51,36 @@ func TestReturnStatement(t *testing.T) {
     }
 }
 
+func TestFunctionExpression(t *testing.T) {
+    tests := []struct{
+        input      string
+        expdParams int
+        expdBody   string
+    }{
+        {"fn(x) { x }", 1, "{x;}"},
+        {"fn(x, y) { x + 1 }", 2, "{(x + 1);}"},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+        f := assertCast[*object.Function](t, i, obj)
+
+        if len(f.Parameters) != tst.expdParams {
+            t.Fatalf("test %d: wrong number of parameters in function object, expected %d (got %d)",
+                i,
+                tst.expdParams,
+                len(f.Parameters))
+        }
+
+        if f.Body.String() != tst.expdBody {
+            t.Fatalf("test %d: incorrect function body, expected %s (got %s)",
+                i,
+                tst.expdBody,
+                f.Body.String())
+        }
+    }
+}
+
 func TestConditionalExpression(t *testing.T) {
     tests := []struct{
         input    string

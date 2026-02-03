@@ -1,6 +1,12 @@
 package object
 
-import "fmt"
+import (
+    "bytes"
+	"fmt"
+    "strings"
+
+	"lemur/ast"
+)
 
 type ObjectType string // this can be a numeric enum
 
@@ -10,12 +16,38 @@ type Object interface {
 }
 
 const (
-    IntegerType = "Integer"
-    BooleanType = "Boolean"
-    NullType    = "Null"
-    ReturnType  = "Return"
-    ErrorType   = "Error"
+    FunctionType = "Function"
+    IntegerType  = "Integer"
+    BooleanType  = "Boolean"
+    NullType     = "Null"
+    ReturnType   = "Return"
+    ErrorType    = "Error"
 )
+
+type Function struct {
+    Parameters []*ast.Identifier
+    Body       *ast.BlockStatement
+    Env        *Environment
+}
+
+func (f *Function) Type() ObjectType { return IntegerType }
+func (f *Function) String() string {
+    var out bytes.Buffer
+
+    params := []string{}
+    for _, p := range f.Parameters {
+	    params = append(params, p.String())
+    }
+
+    out.WriteString("fn")
+    out.WriteString("(")
+    out.WriteString(strings.Join(params, ", "))
+    out.WriteString(")")
+    out.WriteString(f.Body.String())
+
+    return out.String()
+}
+
 
 type Integer struct {
     Value int64
