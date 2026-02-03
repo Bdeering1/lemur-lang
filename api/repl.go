@@ -20,12 +20,12 @@ const (
 )
 
 func StartREPL(in io.Reader) {
-    fmt.Printf("Welcome to lemur alpha REPL, I'm glad you're here!\n")
-    fmt.Printf("Please choose a mode:\n")
-    fmt.Printf("  'l' for lexer output\n")
-    fmt.Printf("  'p' for parser (AST) output\n")
-    fmt.Printf("  's' for parsed string output\n")
-    fmt.Printf("  'e' for code evaluation (default)\n")
+    fmt.Printf("Welcome to the lemur alpha REPL!\n")
+    fmt.Printf("Start typing for code evaluation, or choose another mode:\n")
+    fmt.Printf("  l: lexer output\n")
+    fmt.Printf("  p: parser (AST) output\n")
+    fmt.Printf("  s: parsed string output\n")
+    fmt.Printf("  e: code evaluation (default)\n\n")
 
     mode := None
     scanner := bufio.NewScanner(in)
@@ -33,7 +33,8 @@ func StartREPL(in io.Reader) {
 
     for {
         res := prompt(scanner)
-        if res == "" || res == "q" || res == "quit" { break }
+        if res == "q" || res == "quit" { break }
+        if res == "" { continue }
 
         if res == "l" || res == "lexer" {
             fmt.Printf("<lexer mode>\n")
@@ -65,7 +66,6 @@ func StartREPL(in io.Reader) {
             runEval(res, env)
         }
     }
-
 }
 
 func prompt(scanner *bufio.Scanner) string {

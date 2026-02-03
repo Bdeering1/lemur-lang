@@ -3,6 +3,7 @@ package api
 import (
     "fmt"
     "io"
+    "os"
 
     "lemur/eval"
     "lemur/lexer"
@@ -13,7 +14,16 @@ import (
 
 func EvalFromReader(in io.Reader) {
     b, err := io.ReadAll(in)
-    if err != nil { return }
+    if err != nil || len(b) == 0 { return }
+
+    input := string(b)
+    env := object.CreateEnvironment()
+    runEval(input, env)
+}
+
+func EvalFromFile(fname string) {
+    b, err := os.ReadFile(fname)
+    if err != nil || len(b) == 0 { return }
 
     input := string(b)
     env := object.CreateEnvironment()

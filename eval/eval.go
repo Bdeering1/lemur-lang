@@ -111,6 +111,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 }
 
 func evalBlock(block []ast.Statement, env *object.Environment) object.Object {
+    if len(block) == 0 { return Null }
     var obj object.Object
 
     for _, stmt := range block {

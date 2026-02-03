@@ -14,5 +14,10 @@ func main() {
         return
     }
 
+    if len(os.Args) > 1 {
+        api.EvalFromFile(os.Args[1])
+        return
+    }
+
     api.StartREPL(os.Stdin)
 }
