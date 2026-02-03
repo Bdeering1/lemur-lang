@@ -2,9 +2,17 @@ package main
 
 import (
     "os"
-    "lemur/repl"
+    "lemur/api"
 )
 
 func main() {
-    repl.Start(os.Stdin, os.Stdout)
+    fi, err := os.Stdin.Stat()
+    if err != nil { panic(err) }
+
+    if fi.Mode() & os.ModeNamedPipe != 0 {
+        api.EvalFromReader(os.Stdin)
+        return
+    }
+
+    api.StartREPL(os.Stdin)
 }
