@@ -48,7 +48,6 @@ func (f *Function) String() string {
     return out.String()
 }
 
-
 type Integer struct {
     Value int64
 }

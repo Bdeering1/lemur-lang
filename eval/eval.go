@@ -32,7 +32,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         return evalBlock(node, env)
 
     case *ast.BlockStatement:
-        return evalBlock(node.Statements, env)
+        innerEnv := object.CreateEnclosedEnvironment(env)
+        return evalBlock(node.Statements, innerEnv)
 
     case *ast.LetStatement:
         obj := Eval(node.Value, env)
@@ -74,7 +75,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
             innerEnv.Set(f.Parameters[i].Value, o)
         }
 
-        return unwrapReturn(Eval(f.Body, innerEnv))
+        return unwrapReturn(evalBlock(f.Body.Statements, innerEnv))
 
     case *ast.ConditionalExpression:
         return evalConditionalExpression(node, env)
@@ -111,7 +112,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 }
 
 func evalBlock(block []ast.Statement, env *object.Environment) object.Object {
-    if len(block) == 0 { return Null }
+    if len(block) == 0 { return Null } // no-op
     var obj object.Object
 
     for _, stmt := range block {
@@ -129,7 +130,7 @@ func evalConditionalExpression(ce *ast.ConditionalExpression, env *object.Enviro
 
     if cond == True { return Eval(ce.Consequence, env) }
     if cond == False {
-        if ce.Alternative == nil { return Null } // or default value for type
+        if ce.Alternative == nil { return Null } // default value for type or no-op
         return Eval(ce.Alternative, env)
     }
 
