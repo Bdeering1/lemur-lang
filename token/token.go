@@ -12,8 +12,9 @@ const (
     EOF     = "EOF"
 
     // Identifiers & Literals
-    Ident = "Identifier"
-    Int   = "Int"
+    Ident  = "Identifier"
+    Int    = "Int"
+    String = "String"
 
     // Delimiters
     Comma     = ","

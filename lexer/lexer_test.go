@@ -15,6 +15,9 @@ func TestNextToken(t *testing.T) {
         add(5, 10)
 
         if 5 < 10 { true } else { false }
+
+        "foo"
+        "foo bar"
     `
     tests := []token.Token{
         createToken("-"),
@@ -61,6 +64,11 @@ func TestNextToken(t *testing.T) {
         createToken("{"),
         createToken("false"),
         createToken("}"),
+
+        createString("foo"),
+        createString("foo bar"),
+
+        createToken("\x00"),
     }
 
     l := New(input)
@@ -68,11 +76,11 @@ func TestNextToken(t *testing.T) {
     for i, tt := range tests {
         tok := l.NextToken()
         if tok.Type != tt.Type {
-            t.Fatalf("token: %d - token type wrong. Expected %q, got %q",
+            t.Fatalf("token %d: token type wrong. Expected %q, got %q",
                 i + 1, tt.Type, tok.Type)
         }
         if tok.Literal != tt.Literal {
-            t.Fatalf("token: %d - token literal wrong. Expected %q, got %q",
+            t.Fatalf("token %d: token literal wrong. Expected %q, got %q",
                 i, tt.Literal, tok.Literal)
         }
     }
@@ -84,6 +92,10 @@ func createIdent(l string) token.Token {
 
 func createInt(l string) token.Token {
     return token.Token{Type: token.Int, Literal: l }
+}
+
+func createString(l string) token.Token {
+    return token.Token{Type: token.String, Literal: l }
 }
 
 func createToken(l string) (t token.Token) {

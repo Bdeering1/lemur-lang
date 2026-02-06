@@ -1,6 +1,6 @@
 package lexer
 
-import ("lemur/token")
+import ("fmt"; "lemur/token")
 
 type Lexer struct {
     input   string
@@ -27,9 +27,18 @@ func (l *Lexer) NextToken() (tok token.Token) {
     case ')': tok.Type = token.RParen
     case '{': tok.Type = token.LBrace
     case '}': tok.Type = token.RBrace
-    case '=', '+', '-', '!', '*', '/', '<', '>': // checking individually would be more performant
+    case '+': tok.Type = token.Plus
+    case '-': tok.Type = token.Minus
+    case '*': tok.Type = token.Asterisk
+    case '/': tok.Type = token.Slash
+    case '>': tok.Type = token.GT
+    case '<': tok.Type = token.LT
+    case '=', '!':
         tok.Literal = l.readOperator()
         tok.Type = token.OperatorType(tok.Literal)
+    case '"':
+        tok.Type = token.String
+        tok.Literal = l.readString()
     default:
         if isAlpha(l.ch) {
             tok.Literal = l.readIdent()
@@ -40,11 +49,22 @@ func (l *Lexer) NextToken() (tok token.Token) {
             tok.Type = token.Int
             return tok
         }
+        fmt.Printf("Illegal char: %d", l.ch)
         tok.Type = token.Illegal
     }
 
     l.readChar()
     return tok
+}
+
+func (l *Lexer) readString() string {
+    startPos := l.pos + 1
+    for {
+        l.readChar()
+        if l.ch == '"' || l.ch == '\x00' { break }
+    }
+
+    return l.input[startPos : l.pos]
 }
 
 func (l *Lexer) readOperator() string {
