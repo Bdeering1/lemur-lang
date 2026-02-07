@@ -68,7 +68,7 @@ func (l *Lexer) readString() string {
 }
 
 func (l *Lexer) readOperator() string {
-    literal := string(l.ch) + string(l.peekChar())
+    literal := string(l.ch) + string(l.nextChar())
     if isOperator(literal) {
         l.readChar()
         return literal
@@ -82,7 +82,7 @@ func isOperator(op string) bool {
 
 func (l *Lexer) readIdent() string {
     pos := l.pos
-    for isAlpha(l.ch) { // support numeric characters?
+    for isAlpha(l.ch) || isDigit(l.ch) {
         l.readChar()
     }
     return l.input[pos:l.pos]
@@ -115,7 +115,7 @@ func (l *Lexer) readChar() {
     l.ch = l.input[l.pos]
 }
 
-func (l *Lexer) peekChar() byte {
+func (l *Lexer) nextChar() byte {
     if l.nextPos >= len(l.input) {
         return '\x00'
     }

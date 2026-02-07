@@ -13,8 +13,8 @@ const (
 
     // Identifiers & Literals
     Ident  = "Identifier"
-    Int    = "Int"
     String = "String"
+    Int    = "Int"
 
     // Delimiters
     Comma     = ","

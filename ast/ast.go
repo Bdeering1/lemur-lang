@@ -138,10 +138,7 @@ func (rs *ReturnStatement) String() string {
     var out bytes.Buffer
 
     out.WriteString(rs.Token.Literal + " ")
-
-    if rs.Value != nil { // temp. nil check
-        out.WriteString(rs.Value.String())
-    }
+    out.WriteString(rs.Value.String())
     out.WriteString(";")
 
     return out.String()
@@ -157,9 +154,7 @@ func (es *ExpressionStatement) _stmtNode(){}
 func (es *ExpressionStatement) String() string {
     var out bytes.Buffer
 
-    if es.Value != nil { // temp. nil check
-        out.WriteString(es.Value.String())
-    }
+    out.WriteString(es.Value.String())
     out.WriteString(";")
 
     return out.String()
@@ -173,6 +168,15 @@ var _ Expression = (*Identifier)(nil)
 
 func (i *Identifier) _exprNode(){}
 func (i *Identifier) String() string { return i.Value }
+
+type StringLiteral struct {
+    Token token.Token
+    Value string
+}
+var _ Expression = (*StringLiteral)(nil)
+
+func (ll *StringLiteral) _exprNode(){}
+func (sl *StringLiteral) String() string { return sl.Token.Literal }
 
 type IntegerLiteral struct {
     Token token.Token

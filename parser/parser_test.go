@@ -241,7 +241,7 @@ func TestCallExpression(t *testing.T) {
     testInfixExpression(t, exp.Arguments[2], 4, "+", 5)
 }
 
-func TestIdentifierExpression(t *testing.T) {
+func TestIdentifier(t *testing.T) {
     input := "foobar;"
     program := runNewParser(t, input, 1)
 
@@ -249,7 +249,15 @@ func TestIdentifierExpression(t *testing.T) {
     testIdentifier(t, stmt.Value, "foobar")
 }
 
-func TestIntegerLiteralExpression(t *testing.T) {
+func TestStringLiteral(t *testing.T) {
+    input := "\"foo\"";
+    program := runNewParser(t, input, 1)
+
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
+    testStringLiteral(t, stmt.Value, "foo")
+}
+
+func TestIntegerLiteral(t *testing.T) {
     input := "5;"
     program := runNewParser(t, input, 1)
 
@@ -287,9 +295,9 @@ func checkErrors(t *testing.T, p *Parser) {
     errors := p.Errors()
     if len(errors) == 0  { return }
 
-    t.Errorf("parser has %d errors:", len(errors))
+    t.Errorf("%d parser errors:", len(errors))
     for _, msg := range errors {
-        t.Errorf("\t%q", msg)
+        t.Errorf("  %q", msg)
     }
     t.FailNow()
 }
@@ -325,7 +333,7 @@ func testFunctionLiteral(t *testing.T, exp ast.Expression, stmts int, params []s
     }
 }
 
-func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) {
+func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) { // modify to allow for strings ?
     switch v := expected.(type) {
     case int:
         testIntegerLiteral(t, exp, int64(v))
@@ -352,6 +360,18 @@ func testIdentifier(t *testing.T, exp ast.Expression, val string) {
     }
     if i.Token.Literal != val {
         t.Errorf("identifier token literal is not %s (got %s)", val, i.Token.Literal)
+    }
+}
+
+func testStringLiteral(t *testing.T, sl ast.Expression, val string) {
+    i := assertCast[*ast.StringLiteral](t, sl)
+
+    if i.Value != val {
+        t.Errorf("string value is not %s (got %s)", val, i.Value)
+        return
+    }
+    if i.Token.Literal != fmt.Sprintf("%s", val) {
+        t.Errorf("string token literal is not %s (got %s)", val, i.Token.Literal)
     }
 }
 
