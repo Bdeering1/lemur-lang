@@ -2,10 +2,10 @@ package object
 
 import (
     "bytes"
-	"fmt"
+    "fmt"
     "strings"
 
-	"lemur/ast"
+    "lemur/ast"
 )
 
 type ObjectType string // this can be a numeric enum
@@ -17,6 +17,7 @@ type Object interface {
 
 const (
     FunctionType = "Function"
+    StringType	 = "String"
     IntegerType  = "Integer"
     BooleanType  = "Boolean"
     NullType     = "Null"
@@ -47,6 +48,13 @@ func (f *Function) String() string {
 
     return out.String()
 }
+
+type String struct {
+    Value string
+}
+
+func (s *String) Type() ObjectType { return StringType }
+func (s *String) String() string { return s.Value }
 
 type Integer struct {
     Value int64

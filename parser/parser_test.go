@@ -250,7 +250,7 @@ func TestIdentifier(t *testing.T) {
 }
 
 func TestStringLiteral(t *testing.T) {
-    input := "\"foo\"";
+    input := `"foo"`;
     program := runNewParser(t, input, 1)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])

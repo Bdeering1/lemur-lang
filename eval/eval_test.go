@@ -129,6 +129,23 @@ func TestConditionalExpression(t *testing.T) {
     }
 }
 
+func TestStringExpression(t *testing.T) {
+    tests := []struct {
+        input    string
+        expected string
+    }{
+        {`"foo"`, "foo"},
+        {`"Hello world!"`, "Hello world!"},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+
+        res := assertCast[*object.String](t, i, obj)
+        assert(t, i, res.Value, tst.expected)
+    }
+}
+
 func TestIntegerExpression(t *testing.T) {
     tests := []struct {
         input    string
