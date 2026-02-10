@@ -136,6 +136,7 @@ func TestStringExpression(t *testing.T) {
     }{
         {`"foo"`, "foo"},
         {`"Hello world!"`, "Hello world!"},
+        {`"Hello" + " world!"`, "Hello world!"},
     }
 
     for i, tst := range tests {
@@ -199,6 +200,10 @@ func TestBooleanExpression(t *testing.T) {
         {"1 != 1", false},
         {"1 == 2", false},
         {"1 != 2", true},
+        {`"foo" == "foo"`, true},
+        {`"foo" == "bar"`, false},
+        {`"foo" != "foo"`, false},
+        {`"foo" != "bar"`, true},
         {"(1 < 2) == true", true},
         {"(1 < 2) == false", false},
         {"(1 > 2) == true", false},
@@ -224,6 +229,7 @@ func TestErrorCases(t *testing.T) {
         {"-true; 2", UnknownOperatorError + ": " + "-Boolean"},
         {"true + true", UnknownOperatorError + ": " + "Boolean + Boolean"},
         {"true + true; 2", UnknownOperatorError + ": " + "Boolean + Boolean"},
+        {`"foo" - "bar"`, UnknownOperatorError + ": " + "String - String"},
         {"1 + true", TypeMismatchError + ": " + "Integer + Boolean"},
         {"true + 1", TypeMismatchError + ": " + "Boolean + Integer"},
         {"!(true + 1)", TypeMismatchError + ": " + "Boolean + Integer"},

@@ -109,9 +109,10 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
     case *ast.BooleanLiteral:
         return createBooleanObject(node.Value)
-    }
 
-    return createError(UnknownASTNodeError + InternalErrorPostfix, "%T", node)
+    default:
+        return createError(UnknownASTNodeError + InternalErrorPostfix, "%T", node)
+    }
 }
 
 func evalBlock(block []ast.Statement, env *object.Environment) object.Object {
@@ -146,6 +147,8 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
     }
 
     switch {
+    case left.Type() == object.StringType:
+        return evalStringInfixExpression(operator, left, right)
     case left.Type() == object.IntegerType:
         return evalIntegerInfixExpression(operator, left, right)
     case left.Type() == object.BooleanType:
@@ -153,6 +156,23 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
     default:
         return createError(InfixNotImplementedError, "%s", left.Type())
     }
+}
+
+func evalStringInfixExpression(operator string, left, right object.Object) object.Object {
+    leftVal := left.(*object.String).Value
+    rightVal := right.(*object.String).Value
+
+    switch operator {
+    case "+":
+        return &object.String{Value: leftVal + rightVal}
+    case "==":
+        return createBooleanObject(leftVal == rightVal)
+    case "!=":
+        return createBooleanObject(leftVal != rightVal)
+    default:
+        return createError(UnknownOperatorError, "%s %s %s", left.Type(), operator, right.Type())
+    }
+
 }
 
 func evalIntegerInfixExpression(operator string, left, right object.Object) object.Object {
