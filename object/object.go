@@ -8,14 +8,16 @@ import (
     "lemur/ast"
 )
 
-type ObjectType string // this can be a numeric enum
 
 type Object interface {
     Type()    ObjectType
     String() string
 }
 
+type ObjectType string // this can be a numeric enum
+
 const (
+    BuiltinType  = "Builtin"
     FunctionType = "Function"
     StringType	 = "String"
     IntegerType  = "Integer"
@@ -24,6 +26,11 @@ const (
     ReturnType   = "Return"
     ErrorType    = "Error"
 )
+
+type Builtin func(args ...Object) Object
+
+func (b Builtin) Type() ObjectType { return BuiltinType }
+func (b Builtin) String() string { return "builtin function" }
 
 type Function struct {
     Parameters []*ast.Identifier

@@ -35,10 +35,10 @@ func (p Program) String() string {
     }
     return out.String()
 }
-func (p *Program) PrintAST() string {
+func (p Program) PrintAST() string {
     var b strings.Builder
 
-    prettyPrint(&b, reflect.ValueOf(*p), 0)
+    prettyPrint(&b, reflect.ValueOf(p), 0)
     b.WriteString("\n")
 
     return b.String()

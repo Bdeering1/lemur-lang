@@ -8,15 +8,17 @@ import (
 )
 
 const (
-    ArgumentMistmatchError = "wrong arguments for function"
-    IdentifierNotFoundError = "identifier not found"
+    ArgumentMistmatchError   = "wrong number of arguments for function"
+    ArgumentTypesError       = "argument type(s) not supported"
+    IdentifierNotFoundError  = "identifier not found"
     InfixNotImplementedError = "no infixes implemented for type"
-    InvalidConditionError = "invalid condition"
-    InvalidaCastError = "invalid type cast"
-    TypeMismatchError = "type mismatch"
-    UnknownOperatorError = "unknown operator"
-    UnknownASTNodeError = "unknown AST node"
-    InternalErrorPostfix = " (internal)"
+    InvalidConditionError    = "invalid condition"
+    InvalidCastError         = "invalid type cast"
+    NotYetImplementedError   = "not yet implemented"
+    TypeMismatchError        = "type mismatch"
+    UnknownOperatorError     = "unknown operator"
+    UnknownASTNodeError      = "unknown AST node"
+    InternalErrorPostfix     = " (internal)"
 )
 
 var (
@@ -24,6 +26,21 @@ var (
     False = &object.Boolean{Value: false}
     Null = &object.Null{}
 )
+
+var builtins = map[string]object.Builtin{
+    "len": func(args ...object.Object) object.Object {
+        if len(args) != 1 {
+            return createError(ArgumentMistmatchError, "%s", "len")
+        }
+
+        switch input := args[0].(type) {
+        case *object.String:
+            return &object.Integer{Value: int64(len(input.Value))}
+        default:
+            return createError(ArgumentTypesError, "len(%s)", input.Type())
+        }
+    },
+}
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
     switch node := node.(type) {
@@ -58,24 +75,16 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         obj := Eval(node.Function, env)
         if isError(obj) { return obj }
 
-        f, ok := obj.(*object.Function)
-        if !ok {
-            return createError(InvalidaCastError + InternalErrorPostfix,
-                "%T cannot be cast to object.Function", f)
-        }
-        if len(node.Arguments) != len(f.Parameters) {
-            return createError(ArgumentMistmatchError, "%s", node.Function)
-        }
+        switch f := obj.(type) {
+        case *object.Function:
+            return evalFunction(f, node.Arguments, env)
+        case object.Builtin:
+            return evalBuiltin(f, node.Arguments, env)
 
-        innerEnv := object.CreateEnclosedEnvironment(f.OuterEnv)
-        for i, a := range node.Arguments {
-            o := Eval(a, env)
-            if isError(o) { return o }
-
-            innerEnv.Set(f.Parameters[i].Value, o)
+        default:
+            return createError(InvalidCastError + InternalErrorPostfix,
+                "%T cannot be cast to object.Function", obj)
         }
-
-        return unwrapReturn(evalBlock(f.Body.Statements, innerEnv))
 
     case *ast.ConditionalExpression:
         return evalConditionalExpression(node, env)
@@ -96,10 +105,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         return evalPrefixOperator(node.Operator, right)
 
     case *ast.Identifier:
-        obj, ok := env.Get(node.Value)
-        if !ok { return createError(IdentifierNotFoundError, "%s", node.Value) }
-
-        return obj
+        return evalIdentifier(node, env)
 
     case *ast.StringLiteral:
         return &object.String{Value: node.Value}
@@ -126,6 +132,35 @@ func evalBlock(block []ast.Statement, env *object.Environment) object.Object {
     }
 
     return obj
+}
+
+func evalBuiltin(f object.Builtin, argExprs []ast.Expression, env *object.Environment) object.Object {
+    args := []object.Object{}
+
+    for _, a := range argExprs {
+        o := Eval(a, env)
+        if isError(o) { return o }
+
+        args = append(args, o)
+    }
+
+    return f(args...)
+}
+
+func evalFunction(f *object.Function, args []ast.Expression, env *object.Environment) object.Object {
+    if len(args) != len(f.Parameters) {
+        return createError(ArgumentMistmatchError, "%s", f)
+    }
+
+    innerEnv := object.CreateEnclosedEnvironment(f.OuterEnv)
+    for i, a := range args {
+        o := Eval(a, env)
+        if isError(o) { return o }
+
+        innerEnv.Set(f.Parameters[i].Value, o)
+    }
+
+    return unwrapReturn(evalBlock(f.Body.Statements, innerEnv))
 }
 
 func evalConditionalExpression(ce *ast.ConditionalExpression, env *object.Environment) object.Object {
@@ -156,6 +191,13 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
     default:
         return createError(InfixNotImplementedError, "%s", left.Type())
     }
+}
+
+func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
+    if b, ok := builtins[node.Value]; ok { return b }
+    if obj, ok := env.Get(node.Value); ok { return obj }
+
+    return createError(IdentifierNotFoundError, "%s", node.Value)
 }
 
 func evalStringInfixExpression(operator string, left, right object.Object) object.Object {

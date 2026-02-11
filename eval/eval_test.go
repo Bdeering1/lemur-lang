@@ -51,6 +51,32 @@ func TestReturnStatement(t *testing.T) {
     }
 }
 
+func TestBuiltinFunction(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected any
+    }{
+        {`len("")`, 0},
+        {`len("four")`, 4},
+        {`len("1")`, 1},
+        {`len(1)`, ArgumentTypesError + ": len(Integer)" },
+        {`len("hello", "world")`, ArgumentMistmatchError + ": len" },
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+
+        switch expd := tst.expected.(type) {
+        case int:
+            res := assertCast[*object.Integer](t, i, obj)
+            assert(t, i, res.Value, int64(expd))
+        case string:
+            res := assertCast[*object.Error](t, i, obj)
+            assert(t, i, res.Message, expd)
+        }
+    }
+}
+
 func TestFunctionExpression(t *testing.T) {
     tests := []struct{
         input      string
@@ -65,19 +91,8 @@ func TestFunctionExpression(t *testing.T) {
         obj := runNewEval(tst.input)
         f := assertCast[*object.Function](t, i, obj)
 
-        if len(f.Parameters) != tst.expdParams {
-            t.Fatalf("test %d: wrong number of parameters in function object, expected %d (got %d)",
-                i,
-                tst.expdParams,
-                len(f.Parameters))
-        }
-
-        if f.Body.String() != tst.expdBody {
-            t.Fatalf("test %d: incorrect function body, expected %s (got %s)",
-                i,
-                tst.expdBody,
-                f.Body.String())
-        }
+        assertMsg(t, i, len(f.Parameters), tst.expdParams, "wrong nunmber of parameters in function object")
+        assertMsg(t, i, f.Body.String(), tst.expdBody, "incorrect function body")
     }
 }
 
@@ -223,25 +238,25 @@ func TestErrorCases(t *testing.T) {
         input    string
         expected string
     }{
-        {"!1", UnknownOperatorError + ": " + "!Integer"},
-        {"!1; 2", UnknownOperatorError + ": " + "!Integer"},
-        {"-true", UnknownOperatorError + ": " + "-Boolean"},
-        {"-true; 2", UnknownOperatorError + ": " + "-Boolean"},
-        {"true + true", UnknownOperatorError + ": " + "Boolean + Boolean"},
-        {"true + true; 2", UnknownOperatorError + ": " + "Boolean + Boolean"},
-        {`"foo" - "bar"`, UnknownOperatorError + ": " + "String - String"},
-        {"1 + true", TypeMismatchError + ": " + "Integer + Boolean"},
-        {"true + 1", TypeMismatchError + ": " + "Boolean + Integer"},
-        {"!(true + 1)", TypeMismatchError + ": " + "Boolean + Integer"},
-        {"(true + 1) * (5 + 5)", TypeMismatchError + ": " + "Boolean + Integer"},
-        {"if true + 1 { 2 }", TypeMismatchError + ": " + "Boolean + Integer"},
-        {"return true + 1", TypeMismatchError + ": " + "Boolean + Integer"},
-        {"1 + true; 2", TypeMismatchError + ": " + "Integer + Boolean"},
-        {"if 1 + 1 { 2 }", InvalidConditionError + ": " + "(1 + 1)"},
-        {"x", IdentifierNotFoundError + ": " + "x"},
-        {"!x", IdentifierNotFoundError + ": " + "x"},
-        {"if x { y }", IdentifierNotFoundError + ": " + "x"},
-        {"return x", IdentifierNotFoundError + ": " + "x"},
+        {"!1", UnknownOperatorError + ": !Integer"},
+        {"!1; 2", UnknownOperatorError + ": !Integer"},
+        {"-true", UnknownOperatorError + ": -Boolean"},
+        {"-true; 2", UnknownOperatorError + ": -Boolean"},
+        {"true + true", UnknownOperatorError + ": Boolean + Boolean"},
+        {"true + true; 2", UnknownOperatorError + ": Boolean + Boolean"},
+        {`"foo" - "bar"`, UnknownOperatorError + ": String - String"},
+        {"1 + true", TypeMismatchError + ": Integer + Boolean"},
+        {"true + 1", TypeMismatchError + ": Boolean + Integer"},
+        {"!(true + 1)", TypeMismatchError + ": Boolean + Integer"},
+        {"(true + 1) * (5 + 5)", TypeMismatchError + ": Boolean + Integer"},
+        {"if true + 1 { 2 }", TypeMismatchError + ": Boolean + Integer"},
+        {"return true + 1", TypeMismatchError + ": Boolean + Integer"},
+        {"1 + true; 2", TypeMismatchError + ": Integer + Boolean"},
+        {"if 1 + 1 { 2 }", InvalidConditionError + ": (1 + 1)"},
+        {"x", IdentifierNotFoundError + ": x"},
+        {"!x", IdentifierNotFoundError + ": x"},
+        {"if x { y }", IdentifierNotFoundError + ": x"},
+        {"return x", IdentifierNotFoundError + ": x"},
     }
 
     for i, tst := range tests {
@@ -265,6 +280,16 @@ func assert(t *testing.T, testIdx int, val any, expected any) {
     if val != expected {
         t.Errorf("test %d: incorrect object value, expected %T: %v (got %T: %v)",
             testIdx + 1,
+            expected, expected,
+            val, val)
+    }
+}
+
+func assertMsg(t *testing.T, testIdx int, val any, expected any, msg string) {
+    if val != expected {
+        t.Fatalf("test %d: %s, expected %T: %v (got %T: %v)",
+            testIdx + 1,
+            msg,
             expected, expected,
             val, val)
     }
