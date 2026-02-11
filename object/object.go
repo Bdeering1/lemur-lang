@@ -1,7 +1,6 @@
 package object
 
 import (
-    "bytes"
     "fmt"
     "strings"
 
@@ -38,9 +37,9 @@ type Function struct {
     OuterEnv   *Environment
 }
 
-func (f *Function) Type() ObjectType { return IntegerType }
+func (f *Function) Type() ObjectType { return FunctionType }
 func (f *Function) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     params := []string{}
     for _, p := range f.Parameters {

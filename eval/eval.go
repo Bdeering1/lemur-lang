@@ -193,13 +193,6 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
     }
 }
 
-func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
-    if b, ok := builtins[node.Value]; ok { return b }
-    if obj, ok := env.Get(node.Value); ok { return obj }
-
-    return createError(IdentifierNotFoundError, "%s", node.Value)
-}
-
 func evalStringInfixExpression(operator string, left, right object.Object) object.Object {
     leftVal := left.(*object.String).Value
     rightVal := right.(*object.String).Value
@@ -284,6 +277,14 @@ func evalMinusPrefix(right object.Object) object.Object {
     val := right.(*object.Integer).Value
     return &object.Integer{Value: -val}
 }
+
+func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
+    if b, ok := builtins[node.Value]; ok { return b }
+    if obj, ok := env.Get(node.Value); ok { return obj }
+
+    return createError(IdentifierNotFoundError, "%s", node.Value)
+}
+
 
 func unwrapReturn(obj object.Object) object.Object {
     if ret, ok := obj.(*object.Return); ok { return ret.Value }

@@ -1,7 +1,6 @@
 package ast
 
 import (
-    "bytes"
     "fmt"
     "reflect"
     "strings"
@@ -28,7 +27,7 @@ type Program []Statement
 var _ Node = (Program)(nil)
 
 func (p Program) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     for _, s := range p {
         out.WriteString(s.String())
@@ -49,7 +48,7 @@ func prettyPrint(b *strings.Builder, val reflect.Value, indent int) {
 
     k := val.Kind()
     if k == reflect.Ptr || k == reflect.Interface {
-		if val.IsNil() { b.WriteString("<nil>"); return }
+	if val.IsNil() { b.WriteString("<nil>"); return }
 
         prettyPrint(b, val.Elem(), indent)
         return
@@ -57,31 +56,31 @@ func prettyPrint(b *strings.Builder, val reflect.Value, indent int) {
 
     switch k {
     case reflect.Struct:
-	    t := val.Type()
+	t := val.Type()
 
-	    b.WriteString(fmt.Sprintf("%s {\n", t.Name()))
-	    for i := range val.NumField() {
-		    b.WriteString(fmt.Sprintf("%s  %s: ", indentStr, t.Field(i).Name))
-		    prettyPrint(b, val.Field(i), indent + 1)
-		    b.WriteString("\n")
-	    }
-	    b.WriteString(fmt.Sprintf("%s}", indentStr))
+	b.WriteString(fmt.Sprintf("%s {\n", t.Name()))
+	for i := range val.NumField() {
+		b.WriteString(fmt.Sprintf("%s  %s: ", indentStr, t.Field(i).Name))
+		prettyPrint(b, val.Field(i), indent + 1)
+		b.WriteString("\n")
+	}
+	b.WriteString(fmt.Sprintf("%s}", indentStr))
 
     case reflect.Slice, reflect.Array:
-	    if val.Len() == 0 { b.WriteString("[]"); return }
+	if val.Len() == 0 { b.WriteString("[]"); return }
 
-	    b.WriteString("[\n")
-	    for i := range val.Len() {
-	b.WriteString(fmt.Sprintf("%s  ", indentStr))
-		    prettyPrint(b, val.Index(i), indent + 1)
-		    b.WriteString(",\n")
-	    }
-	    b.WriteString(fmt.Sprintf("%s]", indentStr))
+	b.WriteString("[\n")
+	for i := range val.Len() {
+	    b.WriteString(fmt.Sprintf("%s  ", indentStr))
+	    prettyPrint(b, val.Index(i), indent + 1)
+	    b.WriteString(",\n")
+	}
+	b.WriteString(fmt.Sprintf("%s]", indentStr))
 
     case reflect.String:
-	    b.WriteString(fmt.Sprintf("%q", val.String()))
+	b.WriteString(fmt.Sprintf("%q", val.String()))
     default:
-	    b.WriteString(fmt.Sprintf("%+v", val.Interface()))
+	b.WriteString(fmt.Sprintf("%+v", val.Interface()))
     }
 }
 
@@ -93,7 +92,7 @@ var _ Statement = (*BlockStatement)(nil)
 
 func (bs *BlockStatement) _stmtNode(){}
 func (bs *BlockStatement) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     out.WriteString("{")
     for _, s := range bs.Statements {
@@ -113,7 +112,7 @@ var _ Statement = (*LetStatement)(nil)
 
 func (ls *LetStatement) _stmtNode(){}
 func (ls *LetStatement) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     out.WriteString(ls.Token.Literal + " ")
     out.WriteString(ls.Name.String())
@@ -135,7 +134,7 @@ var _ Statement = (*ReturnStatement)(nil)
 
 func (rs *ReturnStatement) _stmtNode(){}
 func (rs *ReturnStatement) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     out.WriteString(rs.Token.Literal + " ")
     out.WriteString(rs.Value.String())
@@ -152,7 +151,7 @@ var _ Statement = (*ExpressionStatement)(nil);
 
 func (es *ExpressionStatement) _stmtNode(){}
 func (es *ExpressionStatement) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     out.WriteString(es.Value.String())
     out.WriteString(";")
@@ -205,7 +204,7 @@ var _ Expression = (*PrefixExpression)(nil)
 
 func (pe *PrefixExpression) _exprNode(){}
 func (pe *PrefixExpression) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     out.WriteString("(")
     out.WriteString(pe.Operator)
@@ -225,7 +224,7 @@ var _ Expression = (*InfixExpression)(nil)
 
 func (ie *InfixExpression) _exprNode(){}
 func (ie *InfixExpression) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     out.WriteString("(")
     out.WriteString(ie.Left.String())
@@ -246,7 +245,7 @@ var _ Expression = (*ConditionalExpression)(nil)
 
 func (ce *ConditionalExpression) _exprNode(){}
 func (ce *ConditionalExpression) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     out.WriteString("if ")
     out.WriteString(ce.Condition.String())
@@ -270,7 +269,7 @@ var _ Expression = (*FunctionLiteral)(nil)
 
 func (fl *FunctionLiteral) _exprNode(){}
 func (fl *FunctionLiteral) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     params := []string{}
     for _, p := range fl.Parameters {
@@ -294,7 +293,7 @@ type CallExpression struct {
 
 func (ce *CallExpression) _exprNode(){}
 func (ce *CallExpression) String() string {
-    var out bytes.Buffer
+    var out strings.Builder
 
     args := []string{}
     for _, a := range ce.Arguments {

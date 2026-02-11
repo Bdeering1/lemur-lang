@@ -1,6 +1,10 @@
 package lexer
 
-import ("fmt"; "lemur/token")
+import (
+    "fmt"
+
+    "lemur/token"
+)
 
 type Lexer struct {
     input   string
