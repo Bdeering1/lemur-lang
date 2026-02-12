@@ -14,20 +14,16 @@ func TestLetStatement(t *testing.T) {
         expIdentifier string
         expValue      any
     }{
-        {"let x = 5;", "x", 5},
-        {"let y = true;", "y", true},
-        {"let foobar = y;", "foobar", "y"},
+        {"let x = 5", "x", 5},
+        {"let y = true", "y", true},
+        {"let foobar = y", "foobar", "y"},
     }
 
     for _, tst := range tests {
         program := runNewParser(t, tst.input, 1)
         ls := assertCast[*ast.LetStatement](t, program[0])
 
-        if ls.Token.Literal != "let" {
-            t.Errorf("statement token literal is not 'let' (got '%s')", ls)
-            return
-        }
-
+        assertToken(t, ls.Token.Literal, "let")
         testIdentifier(t, ls.Name, tst.expIdentifier)
         testLiteralExpression(t, ls.Value, tst.expValue)
     }
@@ -38,18 +34,16 @@ func TestReturnStatement(t *testing.T) {
         input    string
         expValue any
     }{
-        {"return 5;", 5},
-        {"return true;", true},
-        {"return y;", "y"},
+        {"return 5", 5},
+        {"return true", true},
+        {"return y", "y"},
     }
 
     for _, tst := range tests {
         program := runNewParser(t, tst.input, 1)
         rs := assertCast[*ast.ReturnStatement](t, program[0])
 
-        if rs.Token.Literal != "return" {
-            t.Errorf("statement token literal is not 'return' (got '%s')", rs.Token.Literal)
-        }
+        assertToken(t, rs.Token.Literal, "return")
         testLiteralExpression(t, rs.Value, tst.expValue)
     }
 }
@@ -85,9 +79,7 @@ func TestOperatorPrecedence(t *testing.T) {
         program := runNewParser(t, tst.input, 1)
 
         str := program.String()
-        if str != tst.expected {
-            t.Errorf("expected %q (got %q)", tst.expected, str)
-        }
+        assert(t, str, tst.expected)
     }
 }
 
@@ -138,11 +130,7 @@ func TestPrefixExpression(t *testing.T) {
         stmt := assertCast[*ast.ExpressionStatement](t, program[0])
         exp := assertCast[*ast.PrefixExpression](t, stmt.Value)
 
-        if exp.Operator != pt.operator {
-            t.Errorf("expression operator is not '%s' (got %s)",
-                pt.operator,
-                exp.Operator)
-        }
+        assertMsg(t, exp.Operator, pt.operator, "wrong expression operator")
         testLiteralExpression(t, exp.Right, pt.value)
     }
 }
@@ -156,16 +144,11 @@ func TestIfExpression(t *testing.T) {
     exp := assertCast[*ast.ConditionalExpression](t, stmt.Value)
     testInfixExpression(t, exp.Condition, "x", "<", "y")
 
-    if (len(exp.Consequence.Statements) != 1) {
-        t.Errorf("consequence statements should contain 1 entry (got %d)",
-            len(exp.Consequence.Statements))
-    }
+    assertMsg(t, len(exp.Consequence.Statements), 1, "wrong number of statements in consequence block")
     es := assertCast[*ast.ExpressionStatement](t, exp.Consequence.Statements[0])
     testIdentifier(t, es.Value, "x")
 
-    if (exp.Alternative != nil) {
-        t.Errorf("conditional expression alternative should be nil (got %+v)", exp.Alternative)
-    }
+    assertMsg(t, exp.Alternative, (*ast.BlockStatement)(nil), "wrong value for alternative block")
 }
 
 func TestIfElseExpression(t *testing.T) {
@@ -177,17 +160,11 @@ func TestIfElseExpression(t *testing.T) {
     exp := assertCast[*ast.ConditionalExpression](t, stmt.Value)
     testInfixExpression(t, exp.Condition, "x", "<", "y")
 
-    if (len(exp.Consequence.Statements) != 1) {
-        t.Errorf("consequence statements should contain 1 entry (got %d)",
-            len(exp.Consequence.Statements))
-    }
+    assertMsg(t, len(exp.Consequence.Statements), 1, "wrong number of statements in consequence block")
     csq := assertCast[*ast.ExpressionStatement](t, exp.Consequence.Statements[0])
     testIdentifier(t, csq.Value, "x")
 
-    if (len(exp.Alternative.Statements) != 1) {
-        t.Errorf("alternative statements should contain one entry (got %d)",
-            len(exp.Alternative.Statements))
-    }
+    assertMsg(t, len(exp.Alternative.Statements), 1, "wrong number of statements in alternative block")
     alt := assertCast[*ast.ExpressionStatement](t, exp.Alternative.Statements[0])
     testIdentifier(t, alt.Value, "y")
 }
@@ -202,7 +179,6 @@ func TestFunctionLiteral(t *testing.T) {
 
     f, _ := stmt.Value.(*ast.FunctionLiteral)
     es := assertCast[*ast.ExpressionStatement](t, f.Body.Statements[0])
-
     testInfixExpression(t, es.Value, "x", "+", "y")
 }
 
@@ -232,10 +208,8 @@ func TestCallExpression(t *testing.T) {
     exp := assertCast[*ast.CallExpression](t, stmt.Value)
 
     testIdentifier(t, exp.Function, "add")
+    assertMsg(t, len(exp.Arguments), 3, "wrong number of arguments in call expression")
 
-    if len(exp.Arguments) != 3 {
-        t.Errorf("call expression should contain %d arguments (got %d)", 3, exp.Arguments)
-    }
     testLiteralExpression(t, exp.Arguments[0], 1)
     testInfixExpression(t, exp.Arguments[1], 2, "*", 3)
     testInfixExpression(t, exp.Arguments[2], 4, "+", 5)
@@ -290,14 +264,8 @@ func runNewParser(t *testing.T, input string, expStatements int) ast.Program {
     
     program := p.ParseProgram()
     checkErrors(t, p)
-    if program == nil {
-        t.Fatalf("ParseProgram() returned nil")
-    }
-    if len(program) != expStatements {
-        t.Fatalf("program statements should contain %d entries (got %d)",
-            expStatements,
-            len(program))
-    }
+    if program == nil { t.Fatalf("ParseProgram() returned nil") }
+    assertMsg(t, len(program), expStatements, "wrong number of statements in program")
 
     return program
 }
@@ -316,10 +284,7 @@ func checkErrors(t *testing.T, p *Parser) {
 func testInfixExpression(t *testing.T, exp ast.Expression, left any, op string, right any) {
     ie := assertCast[*ast.InfixExpression](t, exp)
 
-    if ie.Operator != op {
-        t.Errorf("expression operator is not '%s' (got %s)", op, ie.Operator)
-    }
-
+    assertMsg(t, ie.Operator, op, "incorrect expression operator")
     testLiteralExpression(t, ie.Left, left)
     testLiteralExpression(t, ie.Right, right)
 }
@@ -327,21 +292,12 @@ func testInfixExpression(t *testing.T, exp ast.Expression, left any, op string, 
 func testFunctionLiteral(t *testing.T, exp ast.Expression, stmts int, params []string) {
     f := assertCast[*ast.FunctionLiteral](t, exp)
 
-    if len(f.Parameters) != len(params) {
-        t.Fatalf("wrong number of parameters in function literal, expected %d (got %d)",
-            len(params),
-            len(f.Parameters))
-    }
-
+    assertMsg(t, len(f.Parameters), len(params), "wrong number of parameters in function literal")
     for i, ident := range params {
         testLiteralExpression(t, f.Parameters[i], ident)
     }
 
-    if len(f.Body.Statements) != stmts {
-        t.Fatalf("function body should contain %d statements (got %d)",
-            len(f.Body.Statements),
-            stmts)
-    }
+    assertMsg(t, len(f.Body.Statements), stmts, "wrong number of statements in function body")
 }
 
 func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) { // modify to allow for strings ?
@@ -366,47 +322,50 @@ func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) { // 
 func testIdentifier(t *testing.T, exp ast.Expression, val string) {
     i := assertCast[*ast.Identifier](t, exp)
 
-    if i.Value != val {
-        t.Errorf("identifier value is not %s (got %s)", val, i.Value)
-    }
-    if i.Token.Literal != val {
-        t.Errorf("identifier token literal is not %s (got %s)", val, i.Token.Literal)
-    }
+    assert(t, i.Value, val)
+    assertToken(t, i.Token.Literal, val)
 }
 
 func testStringLiteral(t *testing.T, sl ast.Expression, val string) {
-    i := assertCast[*ast.StringLiteral](t, sl)
+    s := assertCast[*ast.StringLiteral](t, sl)
 
-    if i.Value != val {
-        t.Errorf("string value is not %s (got %s)", val, i.Value)
-        return
-    }
-    if i.Token.Literal != fmt.Sprintf("%s", val) {
-        t.Errorf("string token literal is not %s (got %s)", val, i.Token.Literal)
-    }
+    assert(t, s.Value, val)
+    assertToken(t, s.Token.Literal, val)
 }
 
 func testIntegerLiteral(t *testing.T, il ast.Expression, val int64) {
     i := assertCast[*ast.IntegerLiteral](t, il)
 
-    if i.Value != val {
-        t.Errorf("integer value is not %d (got %d)", val, i.Value)
-        return
-    }
-    if i.Token.Literal != fmt.Sprintf("%d", val) {
-        t.Errorf("integer token literal is not %d (got %s)", val, i.Token.Literal)
-    }
+    assert(t, i.Value, val)
+    assertToken(t, i.Token.Literal, fmt.Sprintf("%d", val))
 }
 
 func testBooleanLiteral(t *testing.T, be ast.Expression, val bool) {
     i := assertCast[*ast.BooleanLiteral](t, be)
 
-    if i.Value != val {
-        t.Errorf("boolean value is not %t (got %t)", val, i.Value)
-        return
+    assert(t, i.Value, val)
+    assertToken(t, i.Token.Literal, fmt.Sprintf("%t", val))
+}
+
+func assert(t *testing.T, val, expected any) {
+    if val != expected {
+        t.Errorf("incorrect value, expected %T: %v (got %T: %v)",
+            expected, expected,
+            val, val)
     }
-    if i.Token.Literal != fmt.Sprintf("%t", val) {
-        t.Errorf("boolean token literal is not %t (got %s)", val, i.Token.Literal)
+}
+
+func assertToken(t *testing.T, val, expected any) {
+    if val != expected {
+        t.Errorf("incorrect token literal, expected %v (got %v)", expected, val)
+    }
+}
+
+func assertMsg(t *testing.T, val, expected any, msg string) {
+    if val != expected {
+        t.Fatalf("%s, expected %+v (got %+v)",
+            msg,
+            expected, val)
     }
 }
 
