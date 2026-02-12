@@ -18,6 +18,7 @@ func TestNextToken(t *testing.T) {
 
         "foo"
         "foo bar"
+        [1, 2]
     `
     tests := []token.Token{
         createToken("-"),
@@ -68,6 +69,12 @@ func TestNextToken(t *testing.T) {
         createString("foo"),
         createString("foo bar"),
 
+        createToken("["),
+        createInt("1"),
+        createToken(","),
+        createInt("2"),
+        createToken("]"),
+
         createToken("\x00"),
     }
 
@@ -109,6 +116,8 @@ func createToken(l string) (t token.Token) {
     case ")": t.Type = token.RParen
     case "{": t.Type = token.LBrace
     case "}": t.Type = token.RBrace
+    case "[": t.Type = token.LBracket
+    case "]": t.Type = token.RBracket
     case "=": t.Type = token.Assign
     case "+": t.Type = token.Plus
     case "-": t.Type = token.Minus

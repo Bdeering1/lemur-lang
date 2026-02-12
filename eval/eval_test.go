@@ -276,7 +276,7 @@ func runNewEval(input string) object.Object {
     return Eval(program, env)
 }
 
-func assert(t *testing.T, testIdx int, val any, expected any) {
+func assert(t *testing.T, testIdx int, val, expected any) {
     if val != expected {
         t.Errorf("test %d: incorrect object value, expected %T: %v (got %T: %v)",
             testIdx + 1,
@@ -285,7 +285,7 @@ func assert(t *testing.T, testIdx int, val any, expected any) {
     }
 }
 
-func assertMsg(t *testing.T, testIdx int, val any, expected any, msg string) {
+func assertMsg(t *testing.T, testIdx int, val, expected any, msg string) {
     if val != expected {
         t.Fatalf("test %d: %s, expected %T: %v (got %T: %v)",
             testIdx + 1,

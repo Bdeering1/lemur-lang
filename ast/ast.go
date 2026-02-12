@@ -114,13 +114,11 @@ func (ls *LetStatement) _stmtNode(){}
 func (ls *LetStatement) String() string {
     var out strings.Builder
 
-    out.WriteString(ls.Token.Literal + " ")
+    out.WriteString(ls.Token.Literal)
+    out.WriteString(" ")
     out.WriteString(ls.Name.String())
     out.WriteString(" = ")
-
-    if ls.Value != nil { // temp. nil check
-        out.WriteString(ls.Value.String())
-    }
+    out.WriteString(ls.Value.String())
     out.WriteString(";")
 
     return out.String()
@@ -168,13 +166,35 @@ var _ Expression = (*Identifier)(nil)
 func (i *Identifier) _exprNode(){}
 func (i *Identifier) String() string { return i.Value }
 
+type ArrayLiteral struct {
+    Token token.Token
+    Elements []Expression
+}
+var _ Expression = (*ArrayLiteral)(nil)
+
+func (al *ArrayLiteral) _exprNode(){}
+func (al *ArrayLiteral) String() string {
+    var out strings.Builder
+
+    elems := []string{}
+    for _, el := range al.Elements {
+	elems = append(elems, el.String())
+    }
+
+    out.WriteString("[")
+    out.WriteString(strings.Join(elems, ", "))
+    out.WriteString("]")
+
+    return out.String()
+}
+
 type StringLiteral struct {
     Token token.Token
     Value string
 }
 var _ Expression = (*StringLiteral)(nil)
 
-func (ll *StringLiteral) _exprNode(){}
+func (sl *StringLiteral) _exprNode(){}
 func (sl *StringLiteral) String() string { return sl.Token.Literal }
 
 type IntegerLiteral struct {
@@ -228,7 +248,9 @@ func (ie *InfixExpression) String() string {
 
     out.WriteString("(")
     out.WriteString(ie.Left.String())
-    out.WriteString(" " + ie.Operator + " ")
+    out.WriteString(" ")
+    out.WriteString(ie.Operator)
+    out.WriteString(" ")
     out.WriteString(ie.Right.String())
     out.WriteString(")")
 

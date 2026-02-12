@@ -249,6 +249,17 @@ func TestIdentifier(t *testing.T) {
     testIdentifier(t, stmt.Value, "foobar")
 }
 
+func TestArrayLiteral(t *testing.T) {
+    input := "[1, 2 * 3, 4 + 5]"
+    program := runNewParser(t, input, 1)
+
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
+    al := assertCast[*ast.ArrayLiteral](t, stmt.Value)
+    testIntegerLiteral(t, al.Elements[0], 1)
+    testInfixExpression(t, al.Elements[1], 2, "*", 3)
+    testInfixExpression(t, al.Elements[2], 4, "+", 5)
+}
+
 func TestStringLiteral(t *testing.T) {
     input := `"foo"`;
     program := runNewParser(t, input, 1)

@@ -69,6 +69,7 @@ func New(l *lexer.Lexer) *Parser {
     p.registerPrefix(token.True, p.parseBoolean)
     p.registerPrefix(token.False, p.parseBoolean)
     p.registerPrefix(token.LParen, p.parseGroupedExpression)
+    p.registerPrefix(token.LBracket, p.parseArrayLiteral)
     p.registerPrefix(token.Bang, p.parsePrefixOperator)
     p.registerPrefix(token.Minus, p.parsePrefixOperator)
     p.registerPrefix(token.If, p.parseConditionalExpression)
@@ -179,6 +180,18 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 }
 
 
+func (p *Parser) parseExpressionList() []ast.Expression {
+    args := []ast.Expression{}
+
+    args = append(args, p.parseExpression(Lowest))
+    for p.curTokenIs(token.Comma) {
+        p.readToken()
+        args = append(args, p.parseExpression(Lowest))
+    }
+
+    return args
+}
+
 func (p *Parser) parseExpression(precedence int) ast.Expression {
     prefix := p.prefixParseFns[p.curToken.Type]
     if prefix == nil {
@@ -217,27 +230,18 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 }
 
 func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
-    exp := &ast.CallExpression{Token: p.curToken, Function: function}
+    exp := &ast.CallExpression{
+        Token: p.curToken,
+        Function: function,
+        Arguments: []ast.Expression{},
+    }
     p.readToken()
 
-    exp.Arguments = p.parseCallArguments()
-
-    return exp
-}
-
-func (p *Parser) parseCallArguments() []ast.Expression {
-    args := []ast.Expression{}
-
-    if p.skipToken(token.RParen) { return args }
-
-    args = append(args, p.parseExpression(Lowest))
-    for p.curTokenIs(token.Comma) {
-        p.readToken()
-        args = append(args, p.parseExpression(Lowest))
-    }
+    if p.skipToken(token.RParen) { return exp }
+    exp.Arguments = p.parseExpressionList()
 
     if !p.expectRead(token.RParen) { return nil }
-    return args
+    return exp
 }
 
 func (p *Parser) parsePrefixOperator() ast.Expression {
@@ -318,6 +322,20 @@ func (p *Parser) parseIdentifier() ast.Expression {
     p.readToken()
 
     return i
+}
+
+func (p *Parser) parseArrayLiteral() ast.Expression  {
+    arr := &ast.ArrayLiteral{
+        Token: p.curToken,
+        Elements: []ast.Expression{},
+    }
+    p.readToken()
+
+    if p.skipToken(token.RBracket) { return arr }
+    arr.Elements = p.parseExpressionList()
+
+    if !p.expectRead(token.RBracket) { return nil }
+    return arr
 }
 
 func (p *Parser) parseStringLiteral() ast.Expression {

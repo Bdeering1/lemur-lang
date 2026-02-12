@@ -31,6 +31,8 @@ func (l *Lexer) NextToken() (tok token.Token) {
     case ')': tok.Type = token.RParen
     case '{': tok.Type = token.LBrace
     case '}': tok.Type = token.RBrace
+    case '[': tok.Type = token.LBracket
+    case ']': tok.Type = token.RBracket
     case '+': tok.Type = token.Plus
     case '-': tok.Type = token.Minus
     case '*': tok.Type = token.Asterisk

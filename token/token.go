@@ -23,6 +23,8 @@ const (
     RParen    = ")"
     LBrace    = "{"
     RBrace    = "}"
+    LBracket  = "["
+    RBracket  = "]"
 
     // Operators
     Assign   = "="
