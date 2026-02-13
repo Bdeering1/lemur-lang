@@ -2,11 +2,13 @@ package parser
 
 import (
     "fmt"
+    "slices"
     "strconv"
 
     "lemur/ast"
     "lemur/lexer"
     "lemur/token"
+    "lemur/util"
 )
 
 const (
@@ -129,7 +131,7 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 
     for !p.curTokenIs(token.RBrace) {
         if p.curTokenIs(token.EOF) {
-            p.raiseError("Reach EOF before closing brace in block statement (missing '}')")
+            p.raiseError("reached EOF before closing brace in block statement (missing '}')")
             return block
         }
 
@@ -180,16 +182,13 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 }
 
 
-func (p *Parser) parseExpressionList() []ast.Expression {
-    args := []ast.Expression{}
+func (p *Parser) parseExpressionList(yield func(ast.Expression) bool) {
+    if !yield(p.parseExpression(Lowest)) { return }
 
-    args = append(args, p.parseExpression(Lowest))
     for p.curTokenIs(token.Comma) {
         p.readToken()
-        args = append(args, p.parseExpression(Lowest))
+        if !yield(p.parseExpression(Lowest)) { return }
     }
-
-    return args
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
@@ -215,18 +214,25 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
     return exp
 }
 
-func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
-    exp := &ast.InfixExpression{
-        Token: p.curToken,
-        Operator: p.curToken.Literal,
-        Left: left,
-    }
-    precedence := p.curPrecedence()
+func (p *Parser) parseFunctionLiteral() ast.Expression {
+    l := &ast.FunctionLiteral{Token: p.curToken, Parameters: []*ast.Identifier{}}
     p.readToken()
 
-    exp.Right = p.parseExpression(precedence)
+    if !p.expectRead(token.LParen) { return nil }
+    if !p.skipToken(token.RParen) {
+        var ok bool
+        if l.Parameters, ok = util.Collect[*ast.Identifier](p.parseExpressionList); !ok {
+            p.raiseError("non-identifier expression in function parameters")
+            return nil
+        }
 
-    return exp
+        if !p.expectRead(token.RParen) { return nil }
+    }
+
+    if !p.curTokenIs(token.LBrace) { return nil }
+    l.Body = p.parseBlockStatement()
+
+    return l
 }
 
 func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
@@ -238,21 +244,9 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
     p.readToken()
 
     if p.skipToken(token.RParen) { return exp }
-    exp.Arguments = p.parseExpressionList()
+    exp.Arguments = slices.Collect(p.parseExpressionList)
 
     if !p.expectRead(token.RParen) { return nil }
-    return exp
-}
-
-func (p *Parser) parsePrefixOperator() ast.Expression {
-    exp := &ast.PrefixExpression{
-        Token:    p.curToken,
-        Operator: p.curToken.Literal,
-    }
-    p.readToken()
-
-    exp.Right = p.parseExpression(Prefix)
-
     return exp
 }
 
@@ -277,35 +271,30 @@ func (p *Parser) parseConditionalExpression() ast.Expression {
     return exp
 }
 
-func (p *Parser) parseFunctionLiteral() ast.Expression {
-    l := &ast.FunctionLiteral{Token: p.curToken}
+func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+    exp := &ast.InfixExpression{
+        Token: p.curToken,
+        Operator: p.curToken.Literal,
+        Left: left,
+    }
+    precedence := p.curPrecedence()
     p.readToken()
 
-    if !p.expectRead(token.LParen) { return nil }
-    l.Parameters = p.parseFunctionParameters()
+    exp.Right = p.parseExpression(precedence)
 
-    if l.Parameters == nil || !p.curTokenIs(token.LBrace) { return nil }
-    l.Body = p.parseBlockStatement()
-
-    return l
+    return exp
 }
 
-func (p *Parser) parseFunctionParameters() []*ast.Identifier {
-    idents := []*ast.Identifier{}
-
-    if p.skipToken(token.RParen) { return idents }
-    i, _ := p.parseIdentifier().(*ast.Identifier)
-    idents = append(idents, i)
-
-    for p.curTokenIs(token.Comma) {
-        p.readToken()
-        i, _ := p.parseIdentifier().(*ast.Identifier)
-        idents = append(idents, i)
+func (p *Parser) parsePrefixOperator() ast.Expression {
+    exp := &ast.PrefixExpression{
+        Token:    p.curToken,
+        Operator: p.curToken.Literal,
     }
+    p.readToken()
 
-    if !p.expectRead(token.RParen) { return nil }
+    exp.Right = p.parseExpression(Prefix)
 
-    return idents
+    return exp
 }
 
 func (p *Parser) parseGroupedExpression() ast.Expression {
@@ -332,7 +321,7 @@ func (p *Parser) parseArrayLiteral() ast.Expression  {
     p.readToken()
 
     if p.skipToken(token.RBracket) { return arr }
-    arr.Elements = p.parseExpressionList()
+    arr.Elements = slices.Collect(p.parseExpressionList)
 
     if !p.expectRead(token.RBracket) { return nil }
     return arr

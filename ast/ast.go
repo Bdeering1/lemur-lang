@@ -309,7 +309,7 @@ func (fl *FunctionLiteral) String() string {
 
 type CallExpression struct {
     Token token.Token
-    Function Expression // identifier (or function literal?)
+    Function Expression
     Arguments []Expression
 }
 

@@ -274,9 +274,8 @@ func checkErrors(t *testing.T, p *Parser) {
     errors := p.Errors()
     if len(errors) == 0  { return }
 
-    t.Errorf("%d parser errors:", len(errors))
     for _, msg := range errors {
-        t.Errorf("  %q", msg)
+        t.Errorf("Error: %s", msg)
     }
     t.FailNow()
 }
