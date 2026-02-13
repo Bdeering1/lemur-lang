@@ -20,6 +20,7 @@ const (
     Product
     Prefix
     Call
+    Index
 )
 
 var precedences = map[token.TokenType]int{
@@ -32,6 +33,7 @@ var precedences = map[token.TokenType]int{
     token.Slash:    Product,
     token.Asterisk: Product,
     token.LParen:   Call,
+    token.LBracket: Index,
 }
 
 type (
@@ -66,12 +68,12 @@ func New(l *lexer.Lexer) *Parser {
 
     p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
     p.registerPrefix(token.Ident, p.parseIdentifier)
+    p.registerPrefix(token.LBracket, p.parseArrayLiteral)
     p.registerPrefix(token.String, p.parseStringLiteral)
     p.registerPrefix(token.Int, p.parseIntegerLiteral)
     p.registerPrefix(token.True, p.parseBoolean)
     p.registerPrefix(token.False, p.parseBoolean)
     p.registerPrefix(token.LParen, p.parseGroupedExpression)
-    p.registerPrefix(token.LBracket, p.parseArrayLiteral)
     p.registerPrefix(token.Bang, p.parsePrefixOperator)
     p.registerPrefix(token.Minus, p.parsePrefixOperator)
     p.registerPrefix(token.If, p.parseConditionalExpression)
@@ -87,6 +89,7 @@ func New(l *lexer.Lexer) *Parser {
     p.registerInfix(token.LT, p.parseInfixExpression)
     p.registerInfix(token.GT, p.parseInfixExpression)
     p.registerInfix(token.LParen, p.parseCallExpression)
+    p.registerInfix(token.LBracket, p.parseIndexExpression)
 
     return p
 }
@@ -214,6 +217,87 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
     return exp
 }
 
+func (p *Parser) parsePrefixOperator() ast.Expression {
+    exp := &ast.PrefixExpression{
+        Token:    p.curToken,
+        Operator: p.curToken.Literal,
+    }
+    p.readToken()
+
+    exp.Right = p.parseExpression(Prefix)
+
+    return exp
+}
+
+func (p *Parser) parseGroupedExpression() ast.Expression {
+    p.readToken()
+
+    exp := p.parseExpression(Lowest)
+    if !p.expectRead(token.RParen) { return nil }
+
+    return exp
+}
+
+func (p *Parser) parseIdentifier() ast.Expression {
+    i := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+    p.readToken()
+
+    return i
+}
+
+func (p *Parser) parseArrayLiteral() ast.Expression  {
+    arr := &ast.ArrayLiteral{
+        Token: p.curToken,
+        Elements: []ast.Expression{},
+    }
+    p.readToken()
+
+    if p.skipToken(token.RBracket) { return arr }
+    arr.Elements = slices.Collect(p.parseExpressionList)
+
+    if !p.expectRead(token.RBracket) { return nil }
+    return arr
+}
+
+func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
+    exp := &ast.IndexExpression{Token: p.curToken, Left: left}
+    p.readToken()
+
+    exp.Index = p.parseExpression(Lowest)
+
+    if !p.expectRead(token.RBracket) { return nil }
+    return exp
+}
+
+func (p *Parser) parseStringLiteral() ast.Expression {
+    s := &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
+    p.readToken()
+
+    return s
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+    l := &ast.IntegerLiteral{Token: p.curToken}
+
+    val, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
+    if err != nil {
+        msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
+        p.errors = append(p.errors, msg)
+        return nil
+    }
+    l.Value = val
+
+    p.readToken()
+    return l
+}
+
+func (p *Parser) parseBoolean() ast.Expression {
+    b := &ast.BooleanLiteral{Token: p.curToken, Value: p.curTokenIs(token.True)}
+    p.readToken()
+
+    return b
+}
+
 func (p *Parser) parseFunctionLiteral() ast.Expression {
     l := &ast.FunctionLiteral{Token: p.curToken, Parameters: []*ast.Identifier{}}
     p.readToken()
@@ -283,77 +367,6 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
     exp.Right = p.parseExpression(precedence)
 
     return exp
-}
-
-func (p *Parser) parsePrefixOperator() ast.Expression {
-    exp := &ast.PrefixExpression{
-        Token:    p.curToken,
-        Operator: p.curToken.Literal,
-    }
-    p.readToken()
-
-    exp.Right = p.parseExpression(Prefix)
-
-    return exp
-}
-
-func (p *Parser) parseGroupedExpression() ast.Expression {
-    p.readToken()
-
-    exp := p.parseExpression(Lowest)
-    if !p.expectRead(token.RParen) { return nil }
-
-    return exp
-}
-
-func (p *Parser) parseIdentifier() ast.Expression {
-    i := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
-    p.readToken()
-
-    return i
-}
-
-func (p *Parser) parseArrayLiteral() ast.Expression  {
-    arr := &ast.ArrayLiteral{
-        Token: p.curToken,
-        Elements: []ast.Expression{},
-    }
-    p.readToken()
-
-    if p.skipToken(token.RBracket) { return arr }
-    arr.Elements = slices.Collect(p.parseExpressionList)
-
-    if !p.expectRead(token.RBracket) { return nil }
-    return arr
-}
-
-func (p *Parser) parseStringLiteral() ast.Expression {
-    s := &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
-    p.readToken()
-
-    return s
-}
-
-func (p *Parser) parseIntegerLiteral() ast.Expression {
-    l := &ast.IntegerLiteral{Token: p.curToken}
-
-    val, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
-    if err != nil {
-        msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
-        p.errors = append(p.errors, msg)
-        return nil
-    }
-    l.Value = val
-
-    p.readToken()
-    return l
-}
-
-func (p *Parser) parseBoolean() ast.Expression {
-    b := &ast.BooleanLiteral{Token: p.curToken, Value: p.curTokenIs(token.True)}
-    p.readToken()
-
-    return b
 }
 
 func (p *Parser) readToken() { p.curToken = p.lex.NextToken() }

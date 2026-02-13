@@ -188,6 +188,26 @@ func (al *ArrayLiteral) String() string {
     return out.String()
 }
 
+type IndexExpression struct {
+    Token token.Token
+    Left  Expression
+    Index Expression
+}
+var _ Expression = (*IndexExpression)(nil)
+
+func (ie *IndexExpression) _exprNode(){}
+func (ie *IndexExpression) String() string {
+    var out strings.Builder
+
+    out.WriteString("(")
+    out.WriteString(ie.Left.String())
+    out.WriteString("[")
+    out.WriteString(ie.Index.String())
+    out.WriteString("])")
+
+    return out.String()
+}
+
 type StringLiteral struct {
     Token token.Token
     Value string

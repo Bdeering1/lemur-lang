@@ -73,6 +73,8 @@ func TestOperatorPrecedence(t *testing.T) {
         {"2 / (5 + 5)", "(2 / (5 + 5));"},
         {"-(5 + 5)", "(-(5 + 5));"},
         {"!(true == true)", "(!(true == true));"},
+        {"a * [1, 2, 3][b * c] * d", "((a * ([1, 2, 3][(b * c)])) * d);"},
+        {"add(a[1], b * a[2], [1, 2][1] * c)", "add((a[1]), (b * (a[2])), (([1, 2][1]) * c));"},
     }
 
     for _, tst := range tests {
@@ -232,6 +234,16 @@ func TestArrayLiteral(t *testing.T) {
     testIntegerLiteral(t, al.Elements[0], 1)
     testInfixExpression(t, al.Elements[1], 2, "*", 3)
     testInfixExpression(t, al.Elements[2], 4, "+", 5)
+}
+
+func TestIndexExpression(t *testing.T) {
+    input := "arr[1 + 1]";
+    program := runNewParser(t, input, 1)
+
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
+    ie := assertCast[*ast.IndexExpression](t, stmt.Value)
+    testIdentifier(t, ie.Left, "arr")
+    testInfixExpression(t, ie.Index, 1, "+", 1)
 }
 
 func TestStringLiteral(t *testing.T) {
