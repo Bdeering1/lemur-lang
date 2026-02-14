@@ -163,18 +163,27 @@ func TestArrayLiteral(t *testing.T) {
 func TestIndexExpression(t *testing.T) {
     tests := []struct{
         input    string
-        expected int64
+        expected any
     }{
         {"[1, 2][0]", 1},
         {"[1, 2][0 + 1]", 2},
         {"let arr = [1, 2, 3]; arr[2]", 3},
+        {`"hello"[0]`, "h"},
+        {`"world"[1]`, "o"},
+        {`let s = "asdf"; s[2]`, "d"},
     }
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        res := assertCast[*object.Integer](t, i, obj)
-        assert(t, i, res.Value, tst.expected)
+        switch expd := tst.expected.(type) {
+        case int:
+            res := assertCast[*object.Integer](t, i, obj)
+            assert(t, i, res.Value, int64(expd))
+        case string:
+            res := assertCast[*object.String](t, i, obj)
+            assert(t, i, res.Value, expd)
+        }
     }
 }
 
@@ -293,8 +302,12 @@ func TestErrorCases(t *testing.T) {
         {"return x", IdentifierNotFoundError + ": x"},
         {"[1, 2][-1]", IndexOutOfBoundsError + ": -1"},
         {"[1, 2][2]", IndexOutOfBoundsError + ": 2"},
+        {`"hello"[-1]`, IndexOutOfBoundsError + ": -1"},
+        {`"world"[5]`, IndexOutOfBoundsError + ": 5"},
         {"[1, 2][true]", InvalidIndexExpressionError + ": cannot index Array with Boolean"},
         {`[1, 2]["asdf"]`, InvalidIndexExpressionError + ": cannot index Array with String"},
+        {`""[true]`, InvalidIndexExpressionError + ": cannot index String with Boolean"},
+        {`""["asdf"]`, InvalidIndexExpressionError + ": cannot index String with String"},
     }
 
     for i, tst := range tests {

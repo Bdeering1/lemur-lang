@@ -213,6 +213,16 @@ func evalIndexExpression(left, index ast.Expression, env *object.Environment) ob
 
         return arr.Elements[idx]
 
+    case leftObj.Type() == object.StringType && indexObj.Type() == object.IntegerType:
+        str := leftObj.(*object.String)
+        idx := indexObj.(*object.Integer).Value
+
+        if idx < 0 || idx > int64(len(str.Value)) - 1 {
+            return createError(IndexOutOfBoundsError, "%d", idx)
+        }
+
+        return &object.String{Value: string(str.Value[idx])}
+
     default:
         return createError(
             InvalidIndexExpressionError,
