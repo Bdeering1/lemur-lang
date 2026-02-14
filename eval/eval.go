@@ -8,17 +8,19 @@ import (
 )
 
 const (
-    ArgumentMistmatchError   = "wrong number of arguments for function"
-    ArgumentTypesError       = "argument type(s) not supported"
-    IdentifierNotFoundError  = "identifier not found"
-    InfixNotImplementedError = "no infixes implemented for type"
-    InvalidConditionError    = "invalid condition"
-    InvalidCastError         = "invalid type cast"
-    NotYetImplementedError   = "not yet implemented"
-    TypeMismatchError        = "type mismatch"
-    UnknownOperatorError     = "unknown operator"
-    UnknownASTNodeError      = "unknown AST node"
-    InternalErrorPostfix     = " (internal)"
+    ArgumentMistmatchError      = "wrong number of arguments for function"
+    ArgumentTypesError          = "argument type(s) not supported"
+    IndexOutOfBoundsError       = "index out of bounds"
+    IdentifierNotFoundError     = "identifier not found"
+    InfixNotImplementedError    = "no infixes implemented for type"
+    InvalidConditionError       = "invalid condition"
+    InvalidCastError            = "invalid type cast"
+    InvalidIndexExpressionError = "invalid index expression"
+    NotYetImplementedError      = "not yet implemented"
+    TypeMismatchError           = "type mismatch"
+    UnknownOperatorError        = "unknown operator"
+    UnknownASTNodeError         = "unknown AST node"
+    InternalErrorPostfix        = " (internal)"
 )
 
 var (
@@ -34,6 +36,8 @@ var builtins = map[string]object.Builtin{
         }
 
         switch input := args[0].(type) {
+        case *object.Array:
+            return &object.Integer{Value: int64(len(input.Elements))}
         case *object.String:
             return &object.Integer{Value: int64(len(input.Value))}
         default:
@@ -119,6 +123,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
         return arr
 
+    case *ast.IndexExpression:
+        return evalIndexExpression(node.Left, node.Index, env)
+
     case *ast.StringLiteral:
         return &object.String{Value: node.Value}
 
@@ -186,6 +193,32 @@ func evalConditionalExpression(ce *ast.ConditionalExpression, env *object.Enviro
     }
 
     return createError(InvalidConditionError, "%s", ce.Condition)
+}
+
+func evalIndexExpression(left, index ast.Expression, env *object.Environment) object.Object {
+    leftObj := Eval(left, env)
+    if isError(leftObj) { return leftObj }
+
+    indexObj := Eval(index, env)
+    if isError(indexObj) { return indexObj }
+
+    switch {
+    case leftObj.Type() == object.ArrayType && indexObj.Type() == object.IntegerType:
+        arr := leftObj.(*object.Array)
+        idx := indexObj.(*object.Integer).Value
+
+        if idx < 0 || idx > int64(len(arr.Elements)) - 1 {
+            return createError(IndexOutOfBoundsError, "%d", idx)
+        }
+
+        return arr.Elements[idx]
+
+    default:
+        return createError(
+            InvalidIndexExpressionError,
+            "cannot index %s with %s",
+            leftObj.Type(), indexObj.Type())
+    }
 }
 
 func evalInfixExpression(operator string, left, right object.Object) object.Object {

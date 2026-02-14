@@ -61,6 +61,8 @@ func TestBuiltinFunction(t *testing.T) {
         {`len("1")`, 1},
         {`len(1)`, ArgumentTypesError + ": len(Integer)" },
         {`len("hello", "world")`, ArgumentMistmatchError + ": len" },
+        {"len([])", 0},
+        {"let a = [1, 2, 3]; len(a)", 3},
     }
 
     for i, tst := range tests {
@@ -156,6 +158,24 @@ func TestArrayLiteral(t *testing.T) {
     assert(t, 0, second.Value, int64(6))
     third:= assertCast[*object.Integer](t, 0, arr.Elements[2])
     assert(t, 0, third.Value, int64(30))
+}
+
+func TestIndexExpression(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected int64
+    }{
+        {"[1, 2][0]", 1},
+        {"[1, 2][0 + 1]", 2},
+        {"let arr = [1, 2, 3]; arr[2]", 3},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+
+        res := assertCast[*object.Integer](t, i, obj)
+        assert(t, i, res.Value, tst.expected)
+    }
 }
 
 func TestStringLiteral(t *testing.T) {
@@ -271,6 +291,10 @@ func TestErrorCases(t *testing.T) {
         {"!x", IdentifierNotFoundError + ": x"},
         {"if x { y }", IdentifierNotFoundError + ": x"},
         {"return x", IdentifierNotFoundError + ": x"},
+        {"[1, 2][-1]", IndexOutOfBoundsError + ": -1"},
+        {"[1, 2][2]", IndexOutOfBoundsError + ": 2"},
+        {"[1, 2][true]", InvalidIndexExpressionError + ": cannot index Array with Boolean"},
+        {`[1, 2]["asdf"]`, InvalidIndexExpressionError + ": cannot index Array with String"},
     }
 
     for i, tst := range tests {
