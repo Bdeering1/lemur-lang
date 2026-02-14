@@ -107,6 +107,18 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
     case *ast.Identifier:
         return evalIdentifier(node, env)
 
+    case *ast.ArrayLiteral:
+        arr := &object.Array{Elements: []object.Object{}}
+
+        for _, el := range node.Elements {
+            obj := Eval(el, env)
+            if isError(obj) { return obj }
+
+            arr.Elements = append(arr.Elements, obj)
+        }
+
+        return arr
+
     case *ast.StringLiteral:
         return &object.String{Value: node.Value}
 

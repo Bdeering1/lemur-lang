@@ -144,7 +144,21 @@ func TestConditionalExpression(t *testing.T) {
     }
 }
 
-func TestStringExpression(t *testing.T) {
+func TestArrayLiteral(t *testing.T) {
+    input := "[1, 2 * 3, fn(){ 5 * 6 }()]"
+
+    obj := runNewEval(input)
+    arr := assertCast[*object.Array](t, 0, obj)
+
+    first := assertCast[*object.Integer](t, 0, arr.Elements[0])
+    assert(t, 0, first.Value, int64(1))
+    second := assertCast[*object.Integer](t, 0, arr.Elements[1])
+    assert(t, 0, second.Value, int64(6))
+    third:= assertCast[*object.Integer](t, 0, arr.Elements[2])
+    assert(t, 0, third.Value, int64(30))
+}
+
+func TestStringLiteral(t *testing.T) {
     tests := []struct {
         input    string
         expected string
@@ -298,6 +312,7 @@ func assertMsg(t *testing.T, testIdx int, val, expected any, msg string) {
 func assertCast[T object.Object](t *testing.T, testIdx int, obj object.Object) T {
     o, ok := obj.(T)
     if !ok {
+        if isError(obj) { t.Errorf("%s", obj.String()) }
         t.Fatalf("test %d: object is not an %T (got %T)", testIdx + 1, *new(T), obj)
     }
 
