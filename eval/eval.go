@@ -292,11 +292,18 @@ func evalIntegerInfixExpression(operator string, left, right object.Object) obje
 }
 
 func evalBooleanInfixExpression(operator string, left, right object.Object) object.Object {
+    leftVal := left.(*object.Boolean).Value
+    rightVal := right.(*object.Boolean).Value
+
     switch operator {
     case "==":
         return createBooleanObject(left == right)
     case "!=":
         return createBooleanObject(left != right)
+    case "&&":
+        return createBooleanObject(leftVal && rightVal)
+    case "||":
+        return createBooleanObject(leftVal || rightVal)
     default:
         return createError(UnknownOperatorError, "%s %s %s", left.Type(), operator, right.Type())
     }

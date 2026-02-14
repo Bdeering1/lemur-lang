@@ -21,6 +21,7 @@ const (
 const (
     _ int = iota
     Lowest
+    AndOr
     Equals
     LessGreater
     Sum
@@ -31,6 +32,8 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
+    token.And:      AndOr,
+    token.Or:      AndOr,
     token.Eq:       Equals,
     token.NotEq:    Equals,
     token.LT:       LessGreater,
@@ -94,6 +97,8 @@ func New(l *lexer.Lexer) *Parser {
     p.registerInfix(token.Asterisk, p.parseInfixExpression)
     p.registerInfix(token.Eq, p.parseInfixExpression)
     p.registerInfix(token.NotEq, p.parseInfixExpression)
+    p.registerInfix(token.And, p.parseInfixExpression)
+    p.registerInfix(token.Or, p.parseInfixExpression)
     p.registerInfix(token.LT, p.parseInfixExpression)
     p.registerInfix(token.GT, p.parseInfixExpression)
     p.registerInfix(token.LParen, p.parseCallExpression)

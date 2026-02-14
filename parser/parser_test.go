@@ -67,6 +67,7 @@ func TestOperatorPrecedence(t *testing.T) {
         {"false", "false;"},
         {"3 > 5 == false", "((3 > 5) == false);"},
         {"3 < 5 == true", "((3 < 5) == true);"},
+        {"a == b && c != d", "((a == b) && (c != d));"},
         {"-a * b", "((-a) * b);"},
         {"!-a", "(!(-a));"},
         {"a + b + c", "((a + b) + c);"},

@@ -8,7 +8,7 @@ import (
 
 func TestNextToken(t *testing.T) {
     var input = `
-        -!*/<>==!=;
+        -!*/<>==!=&&||;
         let add = fn(x, y) {
             return x + y
         }
@@ -29,6 +29,8 @@ func TestNextToken(t *testing.T) {
         createToken(">"),
         createToken("=="),
         createToken("!="),
+        createToken("&&"),
+        createToken("||"),
         createToken(";"),
 
         createToken("let"),
@@ -128,6 +130,8 @@ func createToken(l string) (t token.Token) {
     case ">": t.Type = token.GT
     case "==": t.Type = token.Eq
     case "!=": t.Type = token.NotEq
+    case "&&": t.Type = token.And
+    case "||": t.Type = token.Or
     case "fn": t.Type = token.Function
     case "let": t.Type = token.Let
     case "true": t.Type = token.True

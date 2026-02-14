@@ -266,6 +266,14 @@ func TestBooleanExpression(t *testing.T) {
         {"(1 < 2) == false", false},
         {"(1 > 2) == true", false},
         {"(1 > 2) == false", true},
+        {"true && true", true},
+        {"true && false", false},
+        {"false && true", false},
+        {"false && false", false},
+        {"true || true", true},
+        {"true || false", true},
+        {"false || true", true},
+        {"false || false", false},
     }
 
     for i, tst := range tests {
@@ -288,6 +296,11 @@ func TestErrorCases(t *testing.T) {
         {"true + true", UnknownOperatorError + ": Boolean + Boolean"},
         {"true + true; 2", UnknownOperatorError + ": Boolean + Boolean"},
         {`"foo" - "bar"`, UnknownOperatorError + ": String - String"},
+        {"1 && 0", UnknownOperatorError + ": Integer && Integer"},
+        {`"a" && "b"`, UnknownOperatorError + ": String && String"},
+        {"1 || 0", UnknownOperatorError + ": Integer || Integer"},
+        {`"a" || "b"`, UnknownOperatorError + ": String || String"},
+
         {"1 + true", TypeMismatchError + ": Integer + Boolean"},
         {"true + 1", TypeMismatchError + ": Boolean + Integer"},
         {"!(true + 1)", TypeMismatchError + ": Boolean + Integer"},
@@ -295,15 +308,23 @@ func TestErrorCases(t *testing.T) {
         {"if true + 1 { 2 }", TypeMismatchError + ": Boolean + Integer"},
         {"return true + 1", TypeMismatchError + ": Boolean + Integer"},
         {"1 + true; 2", TypeMismatchError + ": Integer + Boolean"},
+        {"true && 1", TypeMismatchError + ": Boolean && Integer"},
+        {"0 && false", TypeMismatchError + ": Integer && Boolean"},
+        {"true || 1", TypeMismatchError + ": Boolean || Integer"},
+        {"0 || false", TypeMismatchError + ": Integer || Boolean"},
+
         {"if 1 + 1 { 2 }", InvalidConditionError + ": (1 + 1)"},
+
         {"x", IdentifierNotFoundError + ": x"},
         {"!x", IdentifierNotFoundError + ": x"},
         {"if x { y }", IdentifierNotFoundError + ": x"},
         {"return x", IdentifierNotFoundError + ": x"},
+
         {"[1, 2][-1]", IndexOutOfBoundsError + ": -1"},
         {"[1, 2][2]", IndexOutOfBoundsError + ": 2"},
         {`"hello"[-1]`, IndexOutOfBoundsError + ": -1"},
         {`"world"[5]`, IndexOutOfBoundsError + ": 5"},
+
         {"[1, 2][true]", InvalidIndexExpressionError + ": cannot index Array with Boolean"},
         {`[1, 2]["asdf"]`, InvalidIndexExpressionError + ": cannot index Array with String"},
         {`""[true]`, InvalidIndexExpressionError + ": cannot index String with Boolean"},
