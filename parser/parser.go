@@ -33,7 +33,7 @@ const (
 
 var precedences = map[token.TokenType]int{
     token.And:      AndOr,
-    token.Or:      AndOr,
+    token.Or:       AndOr,
     token.Eq:       Equals,
     token.NotEq:    Equals,
     token.LT:       LessGreater,
@@ -422,15 +422,15 @@ func (p *Parser) skipToken(tt token.TokenType) bool {
 
 
 func (p *Parser) expectError(tt token.TokenType) {
-    p.raiseError(fmt.Sprintf("expected %s, got %s", tt, p.curToken.Type))
+    p.raiseError(fmt.Sprintf("expected %v, got %v", tt, p.curToken.Type))
 }
 
 func (p *Parser) noPrefixParseFnError() {
-    p.raiseError(fmt.Sprintf("no prefix parse function found for '%s'", p.curToken.Type))
+    p.raiseError(fmt.Sprintf("no prefix parse function found for '%v'", p.curToken.Type))
 }
 
 func (p *Parser) noInfixParseFnError() {
-    p.raiseError(fmt.Sprintf("no infix parse function found for '%s'", p.curToken.Type))
+    p.raiseError(fmt.Sprintf("no infix parse function found for '%v'", p.curToken.Type))
 }
 
 func (p *Parser) raiseError(msg string) {

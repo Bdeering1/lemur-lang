@@ -1,6 +1,7 @@
+//go:generate stringer -type=TokenType
 package token
 
-type TokenType string // could make this an enum
+type TokenType int
 
 type Token struct {
     Type TokenType
@@ -8,47 +9,47 @@ type Token struct {
 }
 
 const (
-    Illegal = "Illegal"
-    EOF     = "EOF"
+    Illegal TokenType = iota
+    EOF
 
     // Identifiers & Literals
-    Ident  = "Identifier"
-    String = "String"
-    Int    = "Int"
+    Ident
+    String
+    Int
 
     // Delimiters
-    Comma     = ","
-    Semicolon = ";"
-    LParen    = "("
-    RParen    = ")"
-    LBrace    = "{"
-    RBrace    = "}"
-    LBracket  = "["
-    RBracket  = "]"
+    Comma
+    Semicolon
+    LParen
+    RParen
+    LBrace
+    RBrace
+    LBracket
+    RBracket
 
     // Operators
-    Assign   = "="
-    Plus     = "+"
-    Minus    = "-"
-    Bang     = "!"
-    Asterisk = "*"
-    Slash    = "/"
+    Assign
+    Plus
+    Minus
+    Bang
+    Asterisk
+    Slash
 
-    LT       = "<"
-    GT       = ">"
-    Eq       = "=="
-    NotEq    = "!="
-    And      = "&&"
-    Or       = "||"
+    LT
+    GT
+    Eq
+    NotEq
+    And
+    Or
 
     // Keywords
-    Function = "Function"
-    Let      = "Let"
-    True     = "True"
-    False    = "False"
-    If       = "If"
-    Else     = "Else"
-    Return   = "Return"
+    Function
+    Let
+    True
+    False
+    If
+    Else
+    Return
 )
 
 var Operators = map[string]TokenType{

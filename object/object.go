@@ -9,7 +9,7 @@ import (
 
 
 type Object interface {
-    Type()    ObjectType
+    Type()   ObjectType
     String() string
 }
 

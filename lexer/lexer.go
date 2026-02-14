@@ -40,8 +40,7 @@ func (l *Lexer) NextToken() (tok token.Token) {
     case '>': tok.Type = token.GT
     case '<': tok.Type = token.LT
     case '=', '!', '&', '|':
-        tok.Literal = l.readOperator()
-        tok.Type = token.OperatorType(tok.Literal)
+        l.readOperator(&tok)
     case '"':
         tok.Type = token.String
         tok.Literal = l.readString()
@@ -72,16 +71,16 @@ func (l *Lexer) readString() string {
     return l.input[startPos : l.pos]
 }
 
-func (l *Lexer) readOperator() string { // make this match readNumber
+func (l *Lexer) readOperator(tok *token.Token) { // make this match readNumber
     cur := string(l.ch)
+
     literal := string(cur) + string(l.nextChar())
     if isOperator(literal) {
         l.readChar()
-        return literal
+        tok.Literal = literal
     }
 
-    if isOperator(cur) { return cur }
-    return token.Illegal
+    tok.Type = token.OperatorType(tok.Literal)
 }
 
 func isOperator(op string) bool {
