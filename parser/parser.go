@@ -12,6 +12,13 @@ import (
 )
 
 const (
+    EOFBeforeClosingBraceError   = "reached EOF before closing brace in block statement (missing '}')"
+    IllegalTokenError            = "illegal token"
+    NonIdentifierAssignmentError = "non-identifier expression after let keyword"
+    NonIdentifierParameterError  = "non-identifier expression in function parameters"
+)
+
+const (
     _ int = iota
     Lowest
     Equals
@@ -67,6 +74,7 @@ func New(l *lexer.Lexer) *Parser {
     p.readToken()
 
     p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
+    p.registerPrefix(token.Illegal, p.parseIllegalToken)
     p.registerPrefix(token.Ident, p.parseIdentifier)
     p.registerPrefix(token.LBracket, p.parseArrayLiteral)
     p.registerPrefix(token.String, p.parseStringLiteral)
@@ -134,7 +142,7 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 
     for !p.curTokenIs(token.RBrace) {
         if p.curTokenIs(token.EOF) {
-            p.raiseError("reached EOF before closing brace in block statement (missing '}')")
+            p.raiseError(EOFBeforeClosingBraceError)
             return block
         }
 
@@ -152,7 +160,10 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
     stmt := &ast.LetStatement{Token: p.curToken}
     p.readToken()
 
-    if !p.curTokenIs(token.Ident) { return nil }
+    if !p.curTokenIs(token.Ident) {
+        p.raiseError(NonIdentifierAssignmentError)
+        return nil
+    }
     stmt.Name, _ = p.parseIdentifier().(*ast.Identifier)
 
     if !p.expectRead(token.Assign) { return nil }
@@ -215,6 +226,11 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
     }
 
     return exp
+}
+
+func (p *Parser) parseIllegalToken() ast.Expression {
+    p.raiseError(fmt.Sprintf("%s: %s", IllegalTokenError, p.curToken.Literal))
+    return nil
 }
 
 func (p *Parser) parsePrefixOperator() ast.Expression {
@@ -306,7 +322,7 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
     if !p.skipToken(token.RParen) {
         var ok bool
         if l.Parameters, ok = util.Collect[*ast.Identifier](p.parseExpressionList); !ok {
-            p.raiseError("non-identifier expression in function parameters")
+            p.raiseError(NonIdentifierParameterError)
             return nil
         }
 

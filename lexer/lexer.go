@@ -51,8 +51,7 @@ func (l *Lexer) NextToken() (tok token.Token) {
             tok.Type = token.IdentType(tok.Literal)
             return tok
         } else if isDigit(l.ch) {
-            tok.Literal = l.readNumber()
-            tok.Type = token.Int
+            l.readNumber(&tok)
             return tok
         }
         fmt.Printf("Illegal char: %d", l.ch)
@@ -94,21 +93,23 @@ func (l *Lexer) readIdent() string {
     return l.input[pos:l.pos]
 }
 
-func isAlpha(ch byte) bool {
-    return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch == '_'
-}
-
-func (l *Lexer) readNumber() string {
+func (l *Lexer) readNumber(tok *token.Token) {
     pos := l.pos
-    for isDigit(l.ch) {
+
+    valid := true
+    for isDigit(l.ch) || isAlpha(l.ch) {
+        if !isDigit(l.ch) { valid = false }
         l.readChar()
     }
-    return l.input[pos:l.pos]
+    tok.Literal = l.input[pos:l.pos]
+
+    if !valid {
+        tok.Type = token.Illegal
+        return
+    }
+    tok.Type = token.Int
 }
 
-func isDigit(ch byte) bool {
-    return ch >= '0' && ch <= '9'
-}
 
 func (l *Lexer) readChar() {
     l.pos = l.nextPos
@@ -129,7 +130,19 @@ func (l *Lexer) nextChar() byte {
 }
 
 func (l *Lexer) skipWhitespace() {
-    for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+    for l.charIsWhiteSpace() {
         l.readChar()
     }
+}
+
+func (l *Lexer) charIsWhiteSpace() bool {
+    return l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r'
+}
+
+func isAlpha(ch byte) bool {
+    return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch == '_'
+}
+
+func isDigit(ch byte) bool {
+    return ch >= '0' && ch <= '9'
 }

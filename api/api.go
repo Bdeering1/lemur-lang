@@ -69,8 +69,8 @@ func parse(input string, stringify bool) {
 }
 
 func printParserErrors(errors []string) {
-    fmt.Printf("failed to parse (%d errors):\n", len(errors))
+    fmt.Printf("Failed to parse (%d errors):\n", len(errors))
     for _, msg := range errors {
-        fmt.Printf("  error: %s\n", msg)
+        fmt.Printf("  Error: %s\n", msg)
     }
 }
