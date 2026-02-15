@@ -23,8 +23,8 @@ func StartREPL(in io.Reader) {
     fmt.Printf("Welcome to the lemur alpha REPL!\n")
     fmt.Printf("Start typing for code evaluation, or choose another mode:\n")
     fmt.Printf("  l: lexer output\n")
-    fmt.Printf("  p: parser (AST) output\n")
-    fmt.Printf("  s: parsed string output\n")
+    fmt.Printf("  p: parser output (AST)\n")
+    fmt.Printf("  s: parser output (stringified)\n")
     fmt.Printf("  e: code evaluation (default)\n\n")
 
     mode := None
@@ -62,6 +62,8 @@ func StartREPL(in io.Reader) {
             continue
         } else if mode == Parser {
             parse(res, false)
+        } else if mode == Stringify {
+            parse(res, true)
         } else {
             runEval(res, env)
         }

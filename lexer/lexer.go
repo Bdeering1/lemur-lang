@@ -36,7 +36,19 @@ func (l *Lexer) NextToken() (tok token.Token) {
     case '+': tok.Type = token.Plus
     case '-': tok.Type = token.Minus
     case '*': tok.Type = token.Asterisk
-    case '/': tok.Type = token.Slash
+    case '/':
+        if l.nextChar() == '/' {
+            for l.ch != '\n' {
+                if l.ch == '\x00' {
+                    tok.Type = token.EOF
+                    return
+                }
+                l.readChar()
+            }
+
+            return l.NextToken()
+        }
+        tok.Type = token.Slash
     case '>': tok.Type = token.GT
     case '<': tok.Type = token.LT
     case '=', '!', '&', '|':
@@ -71,7 +83,7 @@ func (l *Lexer) readString() string {
     return l.input[startPos : l.pos]
 }
 
-func (l *Lexer) readOperator(tok *token.Token) { // make this match readNumber
+func (l *Lexer) readOperator(tok *token.Token) {
     cur := string(l.ch)
 
     literal := string(cur) + string(l.nextChar())

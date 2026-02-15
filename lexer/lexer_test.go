@@ -12,7 +12,7 @@ func TestNextToken(t *testing.T) {
         let add = fn(x, y) {
             return x + y
         }
-        add(5, 10)
+        add(5, 10) // some comment
 
         if 5 < 10 { true } else { false }
 

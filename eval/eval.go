@@ -70,8 +70,10 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
             return evalBuiltin(f, node.Arguments, env)
 
         default:
-            return createError(InvalidCastError + InternalErrorPostfix,
-                "%T cannot be cast to object.Function", obj)
+            return createError(
+                InvalidCastError + InternalErrorPostfix,
+                "%T cannot be cast to object.Function",
+                obj)
         }
 
     case *ast.ConditionalExpression:
