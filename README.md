@@ -35,6 +35,6 @@ map(arr, fn(x){ x * 2 }) // [2, 4, 6]
 git clone https://github.com/Bdeering1/lemur-lang.git
 cd lemur-lang && go build
 
-lemur # REPL
-lemur my_file.txt
+./lemur # REPL
+./lemur my_file.txt
 ```
