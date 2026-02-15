@@ -51,18 +51,46 @@ func TestReturnStatement(t *testing.T) {
     }
 }
 
-func TestBuiltinFunction(t *testing.T) {
+func TestBuiltinFunction(t *testing.T) { // these should use builtin constants
     tests := []struct{
         input    string
         expected any
     }{
+        {"len([])", 0},
+        {"len([1, 2, 3])", 3},
         {`len("")`, 0},
         {`len("four")`, 4},
         {`len("1")`, 1},
-        {`len(1)`, ArgumentTypesError + ": len(Integer)" },
-        {`len("hello", "world")`, ArgumentMistmatchError + ": len" },
-        {"len([])", 0},
-        {"let a = [1, 2, 3]; len(a)", 3},
+        {`len(1)`, ArgumentTypesError + ": len(Integer)"},
+        {`len(true)`, ArgumentTypesError + ": len(Boolean)"},
+        {`len([], [])`, ArgumentMistmatchError + ": len"},
+        {"first([])", nil},
+        {"first([1, 2, 3])", 1},
+        {"first(1)", ArgumentTypesError + ": first(Integer)"},
+        {"first(true)", ArgumentTypesError + ": first(Boolean)"},
+        {`first([], [])`, ArgumentMistmatchError + ": first"},
+        {"last([])", nil},
+        {"last([1, 2, 3])", 3},
+        {"last(1)", ArgumentTypesError + ": last(Integer)"},
+        {"last(true)", ArgumentTypesError + ": last(Boolean)"},
+        {`last([], [])`, ArgumentMistmatchError + ": last"},
+        {"head([])", nil},
+        {"head([1, 2, 3])", []int{1, 2}},
+        {"head(1)", ArgumentTypesError + ": head(Integer)"},
+        {"head(true)", ArgumentTypesError + ": head(Boolean)"},
+        {`head([], [])`, ArgumentMistmatchError + ": head"},
+        {"tail([])", nil},
+        {"tail([1, 2, 3])", []int{2, 3}},
+        {"tail(1)", ArgumentTypesError + ": tail(Integer)"},
+        {"tail(true)", ArgumentTypesError + ": tail(Boolean)"},
+        {`tail([], [])`, ArgumentMistmatchError + ": tail"},
+        {"push([], 1)", []int{1}},
+        {"push([1, 2], 3)", []int{1, 2, 3}},
+        {"push([1, 2], true)", TypeMismatchError + ": push(Array[Integer], Boolean)"},
+        {"push([true, false], 1)", TypeMismatchError + ": push(Array[Boolean], Integer)"},
+        {"push(1, 1)", ArgumentTypesError + ": push(Integer, Integer)"},
+        {"push(true, true)", ArgumentTypesError + ": push(Boolean, Boolean)"},
+        {`push([])`, ArgumentMistmatchError + ": push"},
     }
 
     for i, tst := range tests {
@@ -72,9 +100,17 @@ func TestBuiltinFunction(t *testing.T) {
         case int:
             res := assertCast[*object.Integer](t, i, obj)
             assert(t, i, res.Value, int64(expd))
+        case []int:
+            arr := assertCast[*object.Array](t, i, obj)
+            for idx, el := range arr.Elements {
+                res := el.(*object.Integer)
+                assert(t, i, res.Value, int64(expd[idx]))
+            }
         case string:
             res := assertCast[*object.Error](t, i, obj)
             assert(t, i, res.Message, expd)
+        case nil:
+            assert(t, i, obj, Null)
         }
     }
 }
