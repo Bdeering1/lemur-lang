@@ -13,10 +13,28 @@ The language currently supports the following features:
 - interactive REPL with code evaluation + optional lexer and parser output
 
 Syntax sample:
-```
-let a = 5
-let b = a * 2
+```rust
+let map = fn(col, f) {
+    let iter = fn(col, res) {
+        if len(col) == 0 {
+            return res
+        }
+        iter(tail(col), push(res, f(first(col)))
+    }
 
-let max = fn(x, y) { if x > y { x } else { y } }
-let c = max(a, b)
+    iter(col, [])
+}
+
+let arr = [1, 2, 3]
+map(arr, fn(x){ x * 2 }) // [2, 4, 6]
+```
+
+## Usage
+
+```sh
+git clone https://github.com/Bdeering1/lemur-lang.git
+cd lemur-lang && go build
+
+lemur # REPL
+lemur my_file.txt
 ```
