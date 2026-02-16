@@ -30,7 +30,7 @@ const (
 type Builtin func(args ...Object) Object
 
 func (b Builtin) Type() ObjectType { return BuiltinType }
-func (b Builtin) String() string { return "builtin function" }
+func (b Builtin) String() string { return "builtin function" }	
 
 type Function struct {
     Parameters []*ast.Identifier
@@ -54,11 +54,13 @@ func (f *Function) String() string {
     out.WriteString(")")
     out.WriteString(f.Body.String())
 
+
     return out.String()
 }
 
 type Array struct {
     Elements []Object
+    ElementType ObjectType
 }
 var _ Object = (*Array)(nil)
 

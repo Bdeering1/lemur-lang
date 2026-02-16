@@ -69,7 +69,7 @@ var builtins = map[string]object.Builtin{
             return &object.Array{Elements: input.Elements[0:len(input.Elements) - 1]}
         case *object.String:
             if len(input.Value) < 2 { return &object.String{Value: ""} }
-            return &object.String{Value: string(input.Value[0:len(input.Value) - 1])}
+            return &object.String{Value: string(input.Value[:len(input.Value) - 1])}
         default:
             return createError(ArgumentTypesError, "%s(%s)", Head,  input.Type())
         }
@@ -85,7 +85,7 @@ var builtins = map[string]object.Builtin{
             return &object.Array{Elements: input.Elements[1:len(input.Elements)]}
         case *object.String:
             if len(input.Value) < 2 { return &object.String{Value: ""} }
-            return &object.String{Value: string(input.Value[1:len(input.Value)])}
+            return &object.String{Value: string(input.Value[1:])}
         default:
             return createError(ArgumentTypesError, "%s(%s)", Tail, input.Type())
         }
@@ -95,18 +95,18 @@ var builtins = map[string]object.Builtin{
             return createError(ArgumentMistmatchError, "%s", Push)
         }
 
-        switch input := args[0].(type) {
+        switch col := args[0].(type) {
         case *object.Array:
-            length := len(input.Elements)
-
-            if length != 0 && input.Elements[0].Type() != args[1].Type() {
+            if col.ElementType == object.NullType {
+                col.ElementType = args[1].Type()
+            } else if args[1].Type() != col.ElementType {
                 return createError(
                     TypeMismatchError,
                     "%s(Array[%v], %v)",
-                    Push, input.Elements[0].Type(), args[1].Type())
+                    Push, col.ElementType, args[1].Type())
             }
 
-            arr := append(input.Elements, args[1])
+            arr := append(col.Elements, args[1])
             return &object.Array{Elements: arr}
         case *object.String:
             obj, ok := args[1].(*object.String)
@@ -114,12 +114,12 @@ var builtins = map[string]object.Builtin{
                 return createError(ArgumentTypesError, "%s(String, %v)", Push, obj.Type())
             }
 
-            return &object.String{Value: input.Value + obj.Value}
+            return &object.String{Value: col.Value + obj.Value}
         default:
             return createError(
                 ArgumentTypesError,
                 "%s(%v, %v)",
-                Push, input.Type(), args[1].Type())
+                Push, col.Type(), args[1].Type())
         }
     },
 }

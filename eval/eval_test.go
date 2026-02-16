@@ -348,6 +348,8 @@ func TestErrorCases(t *testing.T) {
         {"0 && false", TypeMismatchError + ": Integer && Boolean"},
         {"true || 1", TypeMismatchError + ": Boolean || Integer"},
         {"0 || false", TypeMismatchError + ": Integer || Boolean"},
+        {"[1, true]", TypeMismatchError + ": Boolean in fixed-type " + object.ArrayType + " of Integer"},
+        {"[true, 1]", TypeMismatchError + ": Integer in fixed-type " + object.ArrayType + " of Boolean"},
 
         {"if 1 + 1 { 2 }", InvalidConditionError + ": (1 + 1)"},
 

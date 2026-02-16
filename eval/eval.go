@@ -98,16 +98,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         return evalIdentifier(node, env)
 
     case *ast.ArrayLiteral:
-        arr := &object.Array{Elements: []object.Object{}}
-
-        for _, el := range node.Elements {
-            obj := Eval(el, env)
-            if isError(obj) { return obj }
-
-            arr.Elements = append(arr.Elements, obj)
-        }
-
-        return arr
+        return evalArray(node, env)
 
     case *ast.IndexExpression:
         return evalIndexExpression(node.Left, node.Index, env)
@@ -331,6 +322,36 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
     if obj, ok := env.Get(node.Value); ok { return obj }
 
     return createError(IdentifierNotFoundError, "%s", node.Value)
+}
+
+func evalArray(node *ast.ArrayLiteral, env *object.Environment) object.Object {
+    arr := &object.Array{
+        Elements: []object.Object{},
+        ElementType: object.NullType,
+    }
+    if len(node.Elements) == 0 { return arr }
+
+    o := Eval(node.Elements[0], env)
+    if isError(o) { return o }
+
+    arr.ElementType = o.Type()
+    arr.Elements = append(arr.Elements, o)
+
+    for _, el := range node.Elements[1:] {
+        o = Eval(el, env)
+        if isError(o) { return o }
+
+        if o.Type() != arr.ElementType {
+            return createError(
+                TypeMismatchError,
+                "%s in fixed-type %s of %s",
+                o.Type(), object.ArrayType, arr.ElementType)
+        }
+
+        arr.Elements = append(arr.Elements, o)
+    }
+
+    return arr
 }
 
 

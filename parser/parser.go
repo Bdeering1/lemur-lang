@@ -201,7 +201,7 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 }
 
 
-func (p *Parser) parseExpressionList(yield func(ast.Expression) bool) {
+func (p *Parser) parseExpressions(yield func(ast.Expression) bool) {
     if !yield(p.parseExpression(Lowest)) { return }
 
     for p.curTokenIs(token.Comma) {
@@ -274,7 +274,7 @@ func (p *Parser) parseArrayLiteral() ast.Expression  {
     p.readToken()
 
     if p.skipToken(token.RBracket) { return arr }
-    arr.Elements = slices.Collect(p.parseExpressionList)
+    arr.Elements = slices.Collect(p.parseExpressions)
 
     if !p.expectRead(token.RBracket) { return nil }
     return arr
@@ -326,7 +326,7 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
     if !p.expectRead(token.LParen) { return nil }
     if !p.skipToken(token.RParen) {
         var ok bool
-        if l.Parameters, ok = util.Collect[*ast.Identifier](p.parseExpressionList); !ok {
+        if l.Parameters, ok = util.CollectAs[*ast.Identifier](p.parseExpressions); !ok {
             p.raiseError(NonIdentifierParameterError)
             return nil
         }
@@ -349,7 +349,7 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
     p.readToken()
 
     if p.skipToken(token.RParen) { return exp }
-    exp.Arguments = slices.Collect(p.parseExpressionList)
+    exp.Arguments = slices.Collect(p.parseExpressions)
 
     if !p.expectRead(token.RParen) { return nil }
     return exp
