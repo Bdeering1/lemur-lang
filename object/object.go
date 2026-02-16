@@ -86,7 +86,7 @@ type String struct {
 var _ Object = (*String)(nil)
 
 func (s *String) Type() ObjectType { return StringType }
-func (s *String) String() string { return s.Value }
+func (s *String) String() string { return fmt.Sprintf("%q", s.Value) }
 
 type Integer struct {
     Value int64

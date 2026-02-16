@@ -179,34 +179,60 @@ func TestConditionalExpression(t *testing.T) {
         {"if 1 > 2 { 10 }", nil},
         {"if true { 10 } else { 20 }", 10},
         {"if false { 10 } else { 20 }", 20},
+
+        {"if 1 + 1 { 2 }", InvalidConditionError + ": (1 + 1)"},
+        {`if "asdf" { 2 }`, InvalidConditionError + `: "asdf"`},
     }
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        expd, ok := tst.expected.(int)
-        if !ok {
+        switch expd := tst.expected.(type) {
+        case int:
+            res := assertCast[*object.Integer](t, i, obj)
+            assert(t, i, res.Value, int64(expd))
+        case Error:
+            res := assertCast[*object.Error](t, i, obj)
+            assert(t, i, res.Message, string(expd))
+        case nil:
             assert(t, i, obj, Null)
-            continue
         }
-
-        res := assertCast[*object.Integer](t, i, obj)
-        assert(t, i, res.Value, int64(expd))
     }
 }
 
 func TestArrayLiteral(t *testing.T) {
-    input := "[1, 2 * 3, fn(){ 5 * 6 }()]"
+    tests := []struct{
+        input    string
+        expected any
+    }{
+        {"[1, 2]", []int{1, 2}},
+        {"[true, false]", []bool{true, false}},
 
-    obj := runNewEval(input)
-    arr := assertCast[*object.Array](t, 0, obj)
+        {"[1, true]", TypeMismatchError + ": Boolean in fixed-type Array of Integer"},
+        {"[true, 1]", TypeMismatchError + ": Integer in fixed-type Array of Boolean"},
+    }
 
-    first := assertCast[*object.Integer](t, 0, arr.Elements[0])
-    assert(t, 0, first.Value, int64(1))
-    second := assertCast[*object.Integer](t, 0, arr.Elements[1])
-    assert(t, 0, second.Value, int64(6))
-    third:= assertCast[*object.Integer](t, 0, arr.Elements[2])
-    assert(t, 0, third.Value, int64(30))
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+
+        switch expd := tst.expected.(type) {
+        case []int:
+            arr := assertCast[*object.Array](t, i, obj)
+            for idx, el := range arr.Elements {
+                res := el.(*object.Integer)
+                assert(t, i, res.Value, int64(expd[idx]))
+            }
+        case []bool:
+            arr := assertCast[*object.Array](t, i, obj)
+            for idx, el := range arr.Elements {
+                res := el.(*object.Boolean)
+                assert(t, i, res.Value, expd[idx])
+            }
+        case Error:
+            res := assertCast[*object.Error](t, i, obj)
+            assert(t, i, res.Message, string(expd))
+        }
+    }
 }
 
 func TestIndexExpression(t *testing.T) {
@@ -220,6 +246,16 @@ func TestIndexExpression(t *testing.T) {
         {`"hello"[0]`, "h"},
         {`"world"[1]`, "o"},
         {`let s = "asdf"; s[2]`, "d"},
+
+        {"[1, 2][-1]", Error(IndexOutOfBoundsError + ": -1")},
+        {"[1, 2][2]", Error(IndexOutOfBoundsError + ": 2")},
+        {`"hello"[-1]`, Error(IndexOutOfBoundsError + ": -1")},
+        {`"world"[5]`, Error(IndexOutOfBoundsError + ": 5")},
+
+        {"[1, 2][true]", Error(InvalidIndexExpressionError + ": cannot index Array with Boolean")},
+        {`[1, 2]["asdf"]`, Error(InvalidIndexExpressionError + ": cannot index Array with String")},
+        {`""[true]`, Error(InvalidIndexExpressionError + ": cannot index String with Boolean")},
+        {`""["asdf"]`, Error(InvalidIndexExpressionError + ": cannot index String with String")},
     }
 
     for i, tst := range tests {
@@ -232,6 +268,9 @@ func TestIndexExpression(t *testing.T) {
         case string:
             res := assertCast[*object.String](t, i, obj)
             assert(t, i, res.Value, expd)
+        case Error:
+            res := assertCast[*object.Error](t, i, obj)
+            assert(t, i, res.Message, string(expd))
         }
     }
 }
@@ -254,10 +293,10 @@ func TestStringLiteral(t *testing.T) {
     }
 }
 
-func TestIntegerExpression(t *testing.T) {
+func TestArithmeticExpressions(t *testing.T) {
     tests := []struct {
         input    string
-        expected int64
+        expected any
     }{
         {"0", 0},
         {"5", 5},
@@ -273,20 +312,40 @@ func TestIntegerExpression(t *testing.T) {
         {"-7 + 7 + -7", -7},
         {"5 * 2 + 10", 20},
         {"10 + 5 * 2", 20},
+
+        {"-true", UnknownOperatorError + ": -Boolean"},
+        {"-true; 2", UnknownOperatorError + ": -Boolean"},
+        {"true + true", UnknownOperatorError + ": Boolean + Boolean"},
+        {"true + true; 2", UnknownOperatorError + ": Boolean + Boolean"},
+        {`"foo" - "bar"`, UnknownOperatorError + ": String - String"},
+
+        {"1 + true", TypeMismatchError + ": Integer + Boolean"},
+        {"true + 1", TypeMismatchError + ": Boolean + Integer"},
+        {"!(true + 1)", TypeMismatchError + ": Boolean + Integer"},
+        {"(true + 1) * (5 + 5)", TypeMismatchError + ": Boolean + Integer"},
+        {"if true + 1 { 2 }", TypeMismatchError + ": Boolean + Integer"},
+        {"return true + 1", TypeMismatchError + ": Boolean + Integer"},
+        {"1 + true; 2", TypeMismatchError + ": Integer + Boolean"},
     }
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        res := assertCast[*object.Integer](t, i, obj)
-        assert(t, i, res.Value, tst.expected)
+        switch expd := tst.expected.(type) {
+        case int:
+            res := assertCast[*object.Integer](t, i, obj)
+            assert(t, i, res.Value, int64(expd))
+        case Error:
+            res := assertCast[*object.Error](t, i, obj)
+            assert(t, i, res.Message, string(expd))
+        }
     }
 }
 
-func TestBooleanExpression(t *testing.T) {
+func TestLogicalExpressions(t *testing.T) {
     tests := []struct{
         input    string
-        expected bool
+        expected any
     }{
         {"true", true},
         {"false", false},
@@ -323,63 +382,44 @@ func TestBooleanExpression(t *testing.T) {
         {"true || false", true},
         {"false || true", true},
         {"false || false", false},
-    }
 
-    for i, tst := range tests {
-        obj := runNewEval(tst.input)
-
-        res := assertCast[*object.Boolean](t, i, obj)
-        assert(t, i, res.Value, tst.expected)
-    }
-}
-
-func TestErrorCases(t *testing.T) {
-    tests := []struct{
-        input    string
-        expected string
-    }{
         {"!1", UnknownOperatorError + ": !Integer"},
         {"!1; 2", UnknownOperatorError + ": !Integer"},
-        {"-true", UnknownOperatorError + ": -Boolean"},
-        {"-true; 2", UnknownOperatorError + ": -Boolean"},
-        {"true + true", UnknownOperatorError + ": Boolean + Boolean"},
-        {"true + true; 2", UnknownOperatorError + ": Boolean + Boolean"},
-        {`"foo" - "bar"`, UnknownOperatorError + ": String - String"},
+
         {"1 && 0", UnknownOperatorError + ": Integer && Integer"},
         {`"a" && "b"`, UnknownOperatorError + ": String && String"},
         {"1 || 0", UnknownOperatorError + ": Integer || Integer"},
         {`"a" || "b"`, UnknownOperatorError + ": String || String"},
 
-        {"1 + true", TypeMismatchError + ": Integer + Boolean"},
-        {"true + 1", TypeMismatchError + ": Boolean + Integer"},
-        {"!(true + 1)", TypeMismatchError + ": Boolean + Integer"},
-        {"(true + 1) * (5 + 5)", TypeMismatchError + ": Boolean + Integer"},
-        {"if true + 1 { 2 }", TypeMismatchError + ": Boolean + Integer"},
-        {"return true + 1", TypeMismatchError + ": Boolean + Integer"},
-        {"1 + true; 2", TypeMismatchError + ": Integer + Boolean"},
         {"true && 1", TypeMismatchError + ": Boolean && Integer"},
         {"0 && false", TypeMismatchError + ": Integer && Boolean"},
         {"true || 1", TypeMismatchError + ": Boolean || Integer"},
         {"0 || false", TypeMismatchError + ": Integer || Boolean"},
-        {"[1, true]", TypeMismatchError + ": Boolean in fixed-type Array of Integer"},
-        {"[true, 1]", TypeMismatchError + ": Integer in fixed-type Array of Boolean"},
+    }
 
-        {"if 1 + 1 { 2 }", InvalidConditionError + ": (1 + 1)"},
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
 
+        switch expd := tst.expected.(type) {
+        case bool:
+            res := assertCast[*object.Boolean](t, i, obj)
+            assert(t, i, res.Value, expd)
+        case Error:
+            res := assertCast[*object.Error](t, i, obj)
+            assert(t, i, res.Message, string(expd))
+        }
+    }
+}
+
+func TestOtherErrorCases(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected string
+    }{
         {"x", IdentifierNotFoundError + ": x"},
         {"!x", IdentifierNotFoundError + ": x"},
         {"if x { y }", IdentifierNotFoundError + ": x"},
         {"return x", IdentifierNotFoundError + ": x"},
-
-        {"[1, 2][-1]", IndexOutOfBoundsError + ": -1"},
-        {"[1, 2][2]", IndexOutOfBoundsError + ": 2"},
-        {`"hello"[-1]`, IndexOutOfBoundsError + ": -1"},
-        {`"world"[5]`, IndexOutOfBoundsError + ": 5"},
-
-        {"[1, 2][true]", InvalidIndexExpressionError + ": cannot index Array with Boolean"},
-        {`[1, 2]["asdf"]`, InvalidIndexExpressionError + ": cannot index Array with String"},
-        {`""[true]`, InvalidIndexExpressionError + ": cannot index String with Boolean"},
-        {`""["asdf"]`, InvalidIndexExpressionError + ": cannot index String with String"},
     }
 
     for i, tst := range tests {

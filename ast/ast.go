@@ -215,7 +215,7 @@ type StringLiteral struct {
 var _ Expression = (*StringLiteral)(nil)
 
 func (sl *StringLiteral) _exprNode(){}
-func (sl *StringLiteral) String() string { return sl.Token.Literal }
+func (sl *StringLiteral) String() string { return fmt.Sprintf("%q", sl.Token.Literal) }
 
 type IntegerLiteral struct {
     Token token.Token
