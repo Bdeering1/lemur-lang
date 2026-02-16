@@ -111,7 +111,10 @@ var builtins = map[string]object.Builtin{
         case *object.String:
             obj, ok := args[1].(*object.String)
             if !ok {
-                return createError(ArgumentTypesError, "%s(String, %v)", Push, obj.Type())
+                return createError(
+                    ArgumentTypesError,
+                    "%s(%s, %v)",
+                    Push, object.StringType, obj.Type())
             }
 
             return &object.String{Value: col.Value + obj.Value}
