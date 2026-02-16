@@ -26,6 +26,7 @@ func (l *Lexer) NextToken() (tok token.Token) {
     switch l.ch {
     case '\x00': tok.Type = token.EOF
     case ',': tok.Type = token.Comma
+    case ':': tok.Type = token.Colon
     case ';': tok.Type = token.Semicolon
     case '(': tok.Type = token.LParen
     case ')': tok.Type = token.RParen

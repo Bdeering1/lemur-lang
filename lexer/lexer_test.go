@@ -8,7 +8,7 @@ import (
 
 func TestNextToken(t *testing.T) {
     var input = `
-        -!*/<>==!=&&||;
+        -!*/<>==!=&&||:;
         let add = fn(x, y) {
             return x + y
         }
@@ -31,6 +31,7 @@ func TestNextToken(t *testing.T) {
         createToken("!="),
         createToken("&&"),
         createToken("||"),
+        createToken(":"),
         createToken(";"),
 
         createToken("let"),
@@ -113,6 +114,7 @@ func createToken(l string) (t token.Token) {
 
     case "\x00": t.Type = token.EOF
     case ",": t.Type = token.Comma
+    case ":": t.Type = token.Colon
     case ";": t.Type = token.Semicolon
     case "(": t.Type = token.LParen
     case ")": t.Type = token.RParen

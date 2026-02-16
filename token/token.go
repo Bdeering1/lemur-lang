@@ -19,6 +19,7 @@ const (
 
     // Delimiters
     Comma
+    Colon
     Semicolon
     LParen
     RParen
