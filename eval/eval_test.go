@@ -302,9 +302,16 @@ func TestIndexExpression(t *testing.T) {
         {`"hello"[0]`, "h"},
         {`"world"[1]`, "o"},
         {`let s = "asdf"; s[2]`, "d"},
+        {`{"one": 1}["one"]`, 1},
+        {`{"one": 1}["o" + "n" + "e"]`, 1},
+        {`{1: "1"}[1]`, "1"},
+        {`{1: "1"}[0 + 1]`, "1"},
+        {`{true: 10}[true]`, 10},
+        {`{true: 10}[true || false]`, 10},
+        {`{}["asdf"]`, nil},
 
+        {"[][0]", Error(IndexOutOfBoundsError + ": 0")},
         {"[1, 2][-1]", Error(IndexOutOfBoundsError + ": -1")},
-        {"[1, 2][2]", Error(IndexOutOfBoundsError + ": 2")},
         {`"hello"[-1]`, Error(IndexOutOfBoundsError + ": -1")},
         {`"world"[5]`, Error(IndexOutOfBoundsError + ": 5")},
 
@@ -312,6 +319,13 @@ func TestIndexExpression(t *testing.T) {
         {`[1, 2]["asdf"]`, Error(InvalidIndexExpressionError + ": cannot index Array with String")},
         {`""[true]`, Error(InvalidIndexExpressionError + ": cannot index String with Boolean")},
         {`""["asdf"]`, Error(InvalidIndexExpressionError + ": cannot index String with String")},
+        {`{}[[]]`, Error(InvalidIndexExpressionError + ": cannot index HashMap with Array")},
+        {`{}[{}]`, Error(InvalidIndexExpressionError + ": cannot index HashMap with HashMap")},
+        {`{}[len]`, Error(InvalidIndexExpressionError + ": cannot index HashMap with Builtin")},
+        {`{}[fn(){}]`, Error(InvalidIndexExpressionError + ": cannot index HashMap with Function")},
+
+        {`{"one": 1}[1]`, Error(TypeMismatchError + ": Integer key in HashMap keyed by String")},
+        {`{1: "1"}["1"]`, Error(TypeMismatchError + ": String key in HashMap keyed by Integer")},
     }
 
     for i, tst := range tests {
@@ -327,6 +341,8 @@ func TestIndexExpression(t *testing.T) {
         case Error:
             res := assertCast[*object.Error](t, i, obj)
             assert(t, i, res.Message, string(expd))
+        case nil:
+            assert(t, i, obj, Null)
         }
     }
 }

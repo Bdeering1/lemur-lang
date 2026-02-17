@@ -181,6 +181,22 @@ func evalIndexExpression(left, index ast.Expression, env *object.Environment) ob
     if isError(indexObj) { return indexObj }
 
     switch {
+    case leftObj.Type() == object.HashMapType && isValueObject(indexObj):
+        hm := leftObj.(*object.HashMap)
+
+        if hm.KeyType == object.NullType { return Null }
+        if indexObj.Type() != hm.KeyType {
+            return createError(
+                TypeMismatchError,
+                "%s key in %s keyed by %s",
+                indexObj.Type(), object.HashMapType, hm.KeyType)
+        }
+
+        res, ok := hm.Pairs[indexObj]
+        if !ok { return Null }
+
+        return res
+
     case leftObj.Type() == object.ArrayType && indexObj.Type() == object.IntegerType:
         arr := leftObj.(*object.Array)
         idx := int(indexObj.(object.Integer))
@@ -334,7 +350,7 @@ func evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Obje
     key := Eval(node.Pairs[0].Key, env)
     if isError(key) { return key }
 
-    if _, ok := key.(object.ValueObject); !ok {
+    if !isValueObject(key) {
         return createError(
             TypeMismatchError,
             "invalid key type (%s) for %s",
@@ -401,6 +417,11 @@ func evalArray(node *ast.ArrayLiteral, env *object.Environment) object.Object {
     return arr
 }
 
+
+func isValueObject(obj object.Object) bool {
+    _, ok := obj.(object.ValueObject)
+    return ok
+}
 
 func unwrapReturn(obj object.Object) object.Object {
     if ret, ok := obj.(*object.Return); ok { return ret.Value }
