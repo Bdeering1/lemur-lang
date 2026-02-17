@@ -18,6 +18,7 @@ type ObjectType string // this can be a numeric enum
 const (
     BuiltinType  = "Builtin"
     FunctionType = "Function"
+    HashMapType	 = "HashMap"
     ArrayType	 = "Array"
     StringType	 = "String"
     IntegerType  = "Integer"
@@ -27,8 +28,11 @@ const (
     ErrorType    = "Error"
 )
 
-type Builtin func(args ...Object) Object
+type ValueObject interface { _valueObject() }
 
+
+type Builtin func(args ...Object) Object
+var _ Object = (Builtin)(nil)
 func (b Builtin) Type() ObjectType { return BuiltinType }
 func (b Builtin) String() string { return "builtin function" }	
 
@@ -58,8 +62,31 @@ func (f *Function) String() string {
     return out.String()
 }
 
+type HashMap struct {
+    Pairs     map[Object]Object
+    KeyType   ObjectType
+    ValueType ObjectType
+}
+var _ Object = (*HashMap)(nil)
+
+func (hm *HashMap) Type() ObjectType{ return HashMapType }
+func (hm *HashMap) String() string {
+    var out strings.Builder
+
+    pairs := []string{}
+    for k, v := range hm.Pairs {
+	pairs = append(pairs, fmt.Sprintf("%s: %s", k, v))
+    }
+
+    out.WriteString("{")
+    out.WriteString(strings.Join(pairs, ", "))
+    out.WriteString("}")
+
+    return out.String()
+}
+
 type Array struct {
-    Elements []Object
+    Elements    []Object
     ElementType ObjectType
 }
 var _ Object = (*Array)(nil)
@@ -82,26 +109,24 @@ func (a *Array) String() string {
 
 type String string
 var _ Object = (String)("")
+var _ ValueObject = (String)("")
 func (s String) Type() ObjectType { return StringType }
 func (s String) String() string { return string(s) }
+func (s String) _valueObject(){}
 
 type Integer int
 var _ Object = (Integer)(0)
+var _ ValueObject = (Integer)(0)
 func (i Integer) Type() ObjectType { return IntegerType }
 func (i Integer) String() string { return fmt.Sprintf("%d", i) }
+func (i Integer) _valueObject(){}
 
 type Boolean bool
 var _ Object = (Boolean)(false)
+var _ ValueObject = (Boolean)(false)
 func (b Boolean) Type() ObjectType { return BooleanType }
 func (b Boolean) String() string { return fmt.Sprintf("%t", b) }
-
-type Null struct { // replace with sum type (option)?
-    Value bool
-}
-var _ Object = (*Null)(nil)
-
-func (b *Null) Type() ObjectType { return NullType }
-func (b *Null) String() string { return "null" }
+func (b Boolean) _valueObject(){}
 
 type Return struct {
     Value Object
@@ -118,3 +143,11 @@ var _ Object = (*Error)(nil)
 
 func (e *Error) Type() ObjectType { return ErrorType }
 func (e *Error) String() string { return "Error: " + e.Message }
+
+type Null struct { // replace with sum type (option)?
+    Value bool
+}
+var _ Object = (*Null)(nil)
+
+func (b *Null) Type() ObjectType { return NullType }
+func (b *Null) String() string { return "null" }

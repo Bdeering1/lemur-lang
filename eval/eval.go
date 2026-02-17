@@ -93,6 +93,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
     case *ast.Identifier:
         return evalIdentifier(node, env)
 
+    case *ast.HashLiteral:
+        return evalHashLiteral(node, env)
+
     case *ast.ArrayLiteral:
         return evalArray(node, env)
 
@@ -318,6 +321,54 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
     if obj, ok := env.Get(node.Value); ok { return obj }
 
     return createError(IdentifierNotFoundError, "%s", node.Value)
+}
+
+func evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Object {
+    hm := &object.HashMap{
+        Pairs: map[object.Object]object.Object{},
+        KeyType: object.NullType,
+        ValueType: object.NullType,
+    }
+    if len(node.Pairs) == 0 { return hm }
+
+    key := Eval(node.Pairs[0].Key, env)
+    if isError(key) { return key }
+
+    if _, ok := key.(object.ValueObject); !ok {
+        return createError(
+            TypeMismatchError,
+            "invalid key type (%s) for %s",
+            key.Type(), object.HashMapType)
+    }
+    hm.KeyType = key.Type()
+
+    val := Eval(node.Pairs[0].Value, env)
+    if isError(val) { return val }
+    hm.ValueType = val.Type()
+
+    for _, p := range node.Pairs {
+        key := Eval(p.Key, env)
+        if isError(key) { return key }
+        if key.Type() != hm.KeyType {
+            return createError(
+                TypeMismatchError,
+                "%s key in %s keyed by %s",
+                key.Type(), object.HashMapType, hm.KeyType)
+        }
+
+        val := Eval(p.Value, env)
+        if isError(val) { return val }
+        if val.Type() != hm.ValueType {
+            return createError(
+                TypeMismatchError,
+                "%s value in %s with %s values",
+                val.Type(), object.HashMapType, hm.ValueType)
+        }
+
+        hm.Pairs[key] = val
+    }
+
+    return hm
 }
 
 func evalArray(node *ast.ArrayLiteral, env *object.Environment) object.Object {

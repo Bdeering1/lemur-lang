@@ -177,8 +177,8 @@ func TestConditionalExpression(t *testing.T) {
         {"if true { 10 } else { 20 }", 10},
         {"if false { 10 } else { 20 }", 20},
 
-        {"if 1 + 1 { 2 }", InvalidConditionError + ": (1 + 1)"},
-        {`if "asdf" { 2 }`, InvalidConditionError + `: "asdf"`},
+        {"if 1 + 1 { 2 }", Error(InvalidConditionError + ": (1 + 1)")},
+        {`if "asdf" { 2 }`, Error(InvalidConditionError + `: "asdf"`)},
     }
 
     for i, tst := range tests {
@@ -197,6 +197,65 @@ func TestConditionalExpression(t *testing.T) {
     }
 }
 
+type KVPair struct { K any; V any }
+func TestHashLiteral(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected []KVPair
+    }{
+        {`{}`, []KVPair{}},
+        {`{"one": "" + "1", "two": "2" + ""}`, []KVPair{ {"one", "1"}, {"two", "2"} }},
+        {`{"one": 1, "two": 2}`, []KVPair{ {"one", 1}, {"two", 2} }},
+        {`{"one": true, "two": false}`, []KVPair{ {"one", true} , {"two", false} }},
+        {`{1: "one", 2: "two"}`, []KVPair{ {1, "one"}, {2, "two"} }},
+        {`{1: 1 * 10, 2: 2 * 10}`, []KVPair{ {1, 10}, {2, 20} }},
+        {`{1: true, 2: false}`, []KVPair{ {1, true}, {2, false} }},
+        {`{true: "1", false: "2"}`, []KVPair{ {true, "1"}, {false, "2"} }},
+        {`{true: 1, false: 2}`, []KVPair{ {true, 1}, {false, 2} }},
+        {`{true: true && false, false: true || false}`, []KVPair{ {true, false}, {false, true} }},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+        hm := assertCast[*object.HashMap](t, i, obj)
+        assert(t, i, len(hm.Pairs), len(tst.expected))
+
+        for _, p := range tst.expected {
+            switch expdKey := p.K.(type) {
+            case string:
+                testHashLiteral(t, i, hm, object.String(expdKey), p.V)
+            case int:
+                testHashLiteral(t, i, hm, object.Integer(expdKey), p.V)
+            case bool:
+                testHashLiteral(t, i, hm, object.Boolean(expdKey), p.V)
+            }
+        }
+    }
+}
+
+func TestInvalidHashLiteral(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected Error
+    }{
+        {`{[]: 0}`, Error(TypeMismatchError + ": invalid key type (Array) for HashMap")},
+        {`{{}: 0}`, Error(TypeMismatchError + ": invalid key type (HashMap) for HashMap")},
+        {`{len: 0}`, Error(TypeMismatchError + ": invalid key type (Builtin) for HashMap")},
+        {`{fn(){}: 0}`, Error(TypeMismatchError + ": invalid key type (Function) for HashMap")},
+        {`{"one": 1, 2: 2}`, Error(TypeMismatchError + ": Integer key in HashMap keyed by String")},
+        {`{1: 1, "two": 2}`, Error(TypeMismatchError + ": String key in HashMap keyed by Integer")},
+        {`{"one": 1, "two": "2"}`, Error(TypeMismatchError + ": String value in HashMap with Integer values")},
+        {`{"one": "1", "two": 2}`, Error(TypeMismatchError + ": Integer value in HashMap with String values")},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+
+        res := assertCast[*object.Error](t, i, obj)
+        assert(t, i, res.Message, string(tst.expected))
+    }
+}
+
 func TestArrayLiteral(t *testing.T) {
     tests := []struct{
         input    string
@@ -205,8 +264,8 @@ func TestArrayLiteral(t *testing.T) {
         {"[1, 2]", []int{1, 2}},
         {"[true, false]", []bool{true, false}},
 
-        {"[1, true]", TypeMismatchError + ": Boolean in fixed-type Array of Integer"},
-        {"[true, 1]", TypeMismatchError + ": Integer in fixed-type Array of Boolean"},
+        {"[1, true]", Error(TypeMismatchError + ": Boolean in fixed-type Array of Integer")},
+        {"[true, 1]", Error(TypeMismatchError + ": Integer in fixed-type Array of Boolean")},
     }
 
     for i, tst := range tests {
@@ -310,19 +369,19 @@ func TestArithmeticExpressions(t *testing.T) {
         {"5 * 2 + 10", 20},
         {"10 + 5 * 2", 20},
 
-        {"-true", UnknownOperatorError + ": -Boolean"},
-        {"-true; 2", UnknownOperatorError + ": -Boolean"},
-        {"true + true", UnknownOperatorError + ": Boolean + Boolean"},
-        {"true + true; 2", UnknownOperatorError + ": Boolean + Boolean"},
-        {`"foo" - "bar"`, UnknownOperatorError + ": String - String"},
+        {"-true", Error(UnknownOperatorError + ": -Boolean")},
+        {"-true; 2", Error(UnknownOperatorError + ": -Boolean")},
+        {"true + true", Error(UnknownOperatorError + ": Boolean + Boolean")},
+        {"true + true; 2", Error(UnknownOperatorError + ": Boolean + Boolean")},
+        {`"foo" - "bar"`, Error(UnknownOperatorError + ": String - String")},
 
-        {"1 + true", TypeMismatchError + ": Integer + Boolean"},
-        {"true + 1", TypeMismatchError + ": Boolean + Integer"},
-        {"!(true + 1)", TypeMismatchError + ": Boolean + Integer"},
-        {"(true + 1) * (5 + 5)", TypeMismatchError + ": Boolean + Integer"},
-        {"if true + 1 { 2 }", TypeMismatchError + ": Boolean + Integer"},
-        {"return true + 1", TypeMismatchError + ": Boolean + Integer"},
-        {"1 + true; 2", TypeMismatchError + ": Integer + Boolean"},
+        {"1 + true", Error(TypeMismatchError + ": Integer + Boolean")},
+        {"true + 1", Error(TypeMismatchError + ": Boolean + Integer")},
+        {"!(true + 1)", Error(TypeMismatchError + ": Boolean + Integer")},
+        {"(true + 1) * (5 + 5)", Error(TypeMismatchError + ": Boolean + Integer")},
+        {"if true + 1 { 2 }", Error(TypeMismatchError + ": Boolean + Integer")},
+        {"return true + 1", Error(TypeMismatchError + ": Boolean + Integer")},
+        {"1 + true; 2", Error(TypeMismatchError + ": Integer + Boolean")},
     }
 
     for i, tst := range tests {
@@ -380,18 +439,18 @@ func TestLogicalExpressions(t *testing.T) {
         {"false || true", true},
         {"false || false", false},
 
-        {"!1", UnknownOperatorError + ": !Integer"},
-        {"!1; 2", UnknownOperatorError + ": !Integer"},
+        {"!1", Error(UnknownOperatorError + ": !Integer")},
+        {"!1; 2", Error(UnknownOperatorError + ": !Integer")},
 
-        {"1 && 0", UnknownOperatorError + ": Integer && Integer"},
-        {`"a" && "b"`, UnknownOperatorError + ": String && String"},
-        {"1 || 0", UnknownOperatorError + ": Integer || Integer"},
-        {`"a" || "b"`, UnknownOperatorError + ": String || String"},
+        {"1 && 0", Error(UnknownOperatorError + ": Integer && Integer")},
+        {`"a" && "b"`, Error(UnknownOperatorError + ": String && String")},
+        {"1 || 0", Error(UnknownOperatorError + ": Integer || Integer")},
+        {`"a" || "b"`, Error(UnknownOperatorError + ": String || String")},
 
-        {"true && 1", TypeMismatchError + ": Boolean && Integer"},
-        {"0 && false", TypeMismatchError + ": Integer && Boolean"},
-        {"true || 1", TypeMismatchError + ": Boolean || Integer"},
-        {"0 || false", TypeMismatchError + ": Integer || Boolean"},
+        {"true && 1", Error(TypeMismatchError + ": Boolean && Integer")},
+        {"0 && false", Error(TypeMismatchError + ": Integer && Boolean")},
+        {"true || 1", Error(TypeMismatchError + ": Boolean || Integer")},
+        {"0 || false", Error(TypeMismatchError + ": Integer || Boolean")},
     }
 
     for i, tst := range tests {
@@ -411,19 +470,34 @@ func TestLogicalExpressions(t *testing.T) {
 func TestOtherErrorCases(t *testing.T) {
     tests := []struct{
         input    string
-        expected string
+        expected Error
     }{
-        {"x", IdentifierNotFoundError + ": x"},
-        {"!x", IdentifierNotFoundError + ": x"},
-        {"if x { y }", IdentifierNotFoundError + ": x"},
-        {"return x", IdentifierNotFoundError + ": x"},
+        {"x", Error(IdentifierNotFoundError + ": x")},
+        {"!x", Error(IdentifierNotFoundError + ": x")},
+        {"if x { y }", Error(IdentifierNotFoundError + ": x")},
+        {"return x", Error(IdentifierNotFoundError + ": x")},
     }
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
         res := assertCast[*object.Error](t, i, obj)
-        assert(t, i, res.Message, tst.expected)
+        assert(t, i, res.Message, string(tst.expected))
+    }
+}
+
+
+func testHashLiteral[K object.Object](t *testing.T, i int, hm *object.HashMap, ek K, ev any) {
+    switch ev := ev.(type) {
+    case string:
+        res := assertCast[object.String](t, i, hm.Pairs[ek])
+        assert(t, i, res, object.String(ev))
+    case int:
+        res := assertCast[object.Integer](t, i, hm.Pairs[ek])
+        assert(t, i, res, object.Integer(ev))
+    case bool:
+        res := assertCast[object.Boolean](t, i, hm.Pairs[ek])
+        assert(t, i, res, object.Boolean(ev))
     }
 }
 
