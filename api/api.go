@@ -42,7 +42,7 @@ func runEval(input string, env *object.Environment) {
     }
 
     evaluated := eval.Eval(program, env)
-    fmt.Println(evaluated.String())
+    fmt.Println(evaluated)
 }
 
 func lex(input string) {

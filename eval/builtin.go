@@ -1,8 +1,13 @@
 package eval
 
-import "lemur/object"
+import (
+    "fmt"
+
+    "lemur/object"
+)
 
 const (
+    Puts  = "puts"
     Len   = "len"
     First = "first"
     Last  = "last"
@@ -12,6 +17,14 @@ const (
 )
 
 var builtins = map[string]object.Builtin{
+    Puts: func(args ...object.Object) object.Object {
+        for _, arg := range args {
+            fmt.Printf("%s ", arg)
+        }
+        fmt.Println()
+
+        return Null
+    },
     Len: func(args ...object.Object) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Len)
