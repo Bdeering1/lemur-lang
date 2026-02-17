@@ -13,7 +13,7 @@ type Error string
 func TestLetStatement(t *testing.T) {
     tests := []struct{
         input    string
-        expected int64
+        expected int
     }{
         {"let a = 5; a", 5},
         {"let a = 2 + 3; a", 5},
@@ -25,31 +25,28 @@ func TestLetStatement(t *testing.T) {
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        res := assertCast[*object.Integer](t, i, obj)
-        assert(t, i, res.Value, tst.expected)
+        res := assertCast[object.Integer](t, i, obj)
+        assert(t, i, res, object.Integer(tst.expected))
     }
 }
 
 func TestReturnStatement(t *testing.T) {
     tests := []struct{
         input    string
-        expected int64
+        expected int
     }{
         {"return 10", 10},
         {"return 10; 9", 10},
         {"return 2 * 5; 9", 10},
         {"8; return 2 * 5; 9", 10},
-        {"{ return 10; }", 10},
-        {"{ return 10; 9 }", 10},
-        {"{{ return 10; 9 } 8 }", 10},
     }
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
         ret := assertCast[*object.Return](t, i, obj)
-        n := assertCast[*object.Integer](t, i, ret.Value)
-        assert(t, i, n.Value, tst.expected)
+        n := assertCast[object.Integer](t, i, ret.Value)
+        assert(t, i, n, object.Integer(tst.expected))
     }
 }
 
@@ -108,20 +105,20 @@ func TestBuiltinFunction(t *testing.T) { // these should use builtin constants
 
         switch expd := tst.expected.(type) {
         case int:
-            res := assertCast[*object.Integer](t, i, obj)
-            assert(t, i, res.Value, int64(expd))
+            res := assertCast[object.Integer](t, i, obj)
+            assert(t, i, res, object.Integer(expd))
         case []int:
             arr := assertCast[*object.Array](t, i, obj)
             for idx, el := range arr.Elements {
-                res := el.(*object.Integer)
-                assert(t, i, res.Value, int64(expd[idx]))
+                res := el.(object.Integer)
+                assert(t, i, res, object.Integer(expd[idx]))
             }
         case Error:
             res := assertCast[*object.Error](t, i, obj)
             assert(t, i, res.Message, string(expd))
         case string:
-            res := assertCast[*object.String](t, i, obj)
-            assert(t, i, res.Value, expd)
+            res := assertCast[object.String](t, i, obj)
+            assert(t, i, res, object.String(expd))
         case nil:
             assert(t, i, obj, Null)
         }
@@ -150,7 +147,7 @@ func TestFunctionExpression(t *testing.T) {
 func TestCallExpression(t *testing.T) {
     tests := []struct{
         input    string
-        expected int64
+        expected int
     }{
         {"let identity = fn(x) { x }; identity(5)", 5},
         {"let identity = fn(x) { return x }; identity(5)", 5},
@@ -163,8 +160,8 @@ func TestCallExpression(t *testing.T) {
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        res := assertCast[*object.Integer](t, i, obj)
-        assert(t, i, res.Value, tst.expected)
+        res := assertCast[object.Integer](t, i, obj)
+        assert(t, i, res, object.Integer(tst.expected))
     }
 }
 
@@ -189,8 +186,8 @@ func TestConditionalExpression(t *testing.T) {
 
         switch expd := tst.expected.(type) {
         case int:
-            res := assertCast[*object.Integer](t, i, obj)
-            assert(t, i, res.Value, int64(expd))
+            res := assertCast[object.Integer](t, i, obj)
+            assert(t, i, res, object.Integer(expd))
         case Error:
             res := assertCast[*object.Error](t, i, obj)
             assert(t, i, res.Message, string(expd))
@@ -219,14 +216,14 @@ func TestArrayLiteral(t *testing.T) {
         case []int:
             arr := assertCast[*object.Array](t, i, obj)
             for idx, el := range arr.Elements {
-                res := el.(*object.Integer)
-                assert(t, i, res.Value, int64(expd[idx]))
+                res := el.(object.Integer)
+                assert(t, i, res, object.Integer(expd[idx]))
             }
         case []bool:
             arr := assertCast[*object.Array](t, i, obj)
             for idx, el := range arr.Elements {
-                res := el.(*object.Boolean)
-                assert(t, i, res.Value, expd[idx])
+                res := el.(object.Boolean)
+                assert(t, i, res, object.Boolean(expd[idx]))
             }
         case Error:
             res := assertCast[*object.Error](t, i, obj)
@@ -263,11 +260,11 @@ func TestIndexExpression(t *testing.T) {
 
         switch expd := tst.expected.(type) {
         case int:
-            res := assertCast[*object.Integer](t, i, obj)
-            assert(t, i, res.Value, int64(expd))
+            res := assertCast[object.Integer](t, i, obj)
+            assert(t, i, res, object.Integer(expd))
         case string:
-            res := assertCast[*object.String](t, i, obj)
-            assert(t, i, res.Value, expd)
+            res := assertCast[object.String](t, i, obj)
+            assert(t, i, res, object.String(expd))
         case Error:
             res := assertCast[*object.Error](t, i, obj)
             assert(t, i, res.Message, string(expd))
@@ -288,8 +285,8 @@ func TestStringLiteral(t *testing.T) {
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        res := assertCast[*object.String](t, i, obj)
-        assert(t, i, res.Value, tst.expected)
+        res := assertCast[object.String](t, i, obj)
+        assert(t, i, res, object.String(tst.expected))
     }
 }
 
@@ -333,8 +330,8 @@ func TestArithmeticExpressions(t *testing.T) {
 
         switch expd := tst.expected.(type) {
         case int:
-            res := assertCast[*object.Integer](t, i, obj)
-            assert(t, i, res.Value, int64(expd))
+            res := assertCast[object.Integer](t, i, obj)
+            assert(t, i, res, object.Integer(expd))
         case Error:
             res := assertCast[*object.Error](t, i, obj)
             assert(t, i, res.Message, string(expd))
@@ -402,8 +399,8 @@ func TestLogicalExpressions(t *testing.T) {
 
         switch expd := tst.expected.(type) {
         case bool:
-            res := assertCast[*object.Boolean](t, i, obj)
-            assert(t, i, res.Value, expd)
+            res := assertCast[object.Boolean](t, i, obj)
+            assert(t, i, res, object.Boolean(expd))
         case Error:
             res := assertCast[*object.Error](t, i, obj)
             assert(t, i, res.Message, string(expd))

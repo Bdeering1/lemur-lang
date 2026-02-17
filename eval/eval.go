@@ -23,11 +23,7 @@ const (
     InternalErrorPostfix        = " (internal)"
 )
 
-var (
-    True = &object.Boolean{Value: true}
-    False = &object.Boolean{Value: false}
-    Null = &object.Null{}
-)
+var Null = &object.Null{}
 
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
@@ -104,13 +100,13 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         return evalIndexExpression(node.Left, node.Index, env)
 
     case *ast.StringLiteral:
-        return &object.String{Value: node.Value}
+        return object.String(node.Value)
 
     case *ast.IntegerLiteral:
-        return &object.Integer{Value: node.Value}
+        return object.Integer(node.Value)
 
     case *ast.BooleanLiteral:
-        return createBooleanObject(node.Value)
+        return object.Boolean(node.Value)
 
     default:
         return createError(UnknownASTNodeError + InternalErrorPostfix, "%T", node)
@@ -160,16 +156,18 @@ func evalFunction(f *object.Function, args []ast.Expression, env *object.Environ
 }
 
 func evalConditionalExpression(ce *ast.ConditionalExpression, env *object.Environment) object.Object {
-    cond := Eval(ce.Condition, env)
-    if isError(cond) { return cond }
+    obj := Eval(ce.Condition, env)
+    if isError(obj) { return obj }
 
-    if cond == True { return Eval(ce.Consequence, env) }
-    if cond == False {
-        if ce.Alternative == nil { return Null } // default value for type or no-op
-        return Eval(ce.Alternative, env)
+    cond, ok := obj.(object.Boolean)
+    if !ok {
+        return createError(InvalidConditionError, "%s", ce.Condition)
     }
 
-    return createError(InvalidConditionError, "%s", ce.Condition)
+    if cond { return Eval(ce.Consequence, env) }
+
+    if ce.Alternative == nil { return Null } // default value for type or no-op
+    return Eval(ce.Alternative, env)
 }
 
 func evalIndexExpression(left, index ast.Expression, env *object.Environment) object.Object {
@@ -182,23 +180,23 @@ func evalIndexExpression(left, index ast.Expression, env *object.Environment) ob
     switch {
     case leftObj.Type() == object.ArrayType && indexObj.Type() == object.IntegerType:
         arr := leftObj.(*object.Array)
-        idx := indexObj.(*object.Integer).Value
+        idx := int(indexObj.(object.Integer))
 
-        if idx < 0 || idx > int64(len(arr.Elements)) - 1 {
+        if idx < 0 || idx > len(arr.Elements) - 1 {
             return createError(IndexOutOfBoundsError, "%d", idx)
         }
 
         return arr.Elements[idx]
 
     case leftObj.Type() == object.StringType && indexObj.Type() == object.IntegerType:
-        str := leftObj.(*object.String)
-        idx := indexObj.(*object.Integer).Value
+        str := leftObj.(object.String)
+        idx := int(indexObj.(object.Integer))
 
-        if idx < 0 || idx > int64(len(str.Value)) - 1 {
+        if idx < 0 || idx > len(str) - 1 {
             return createError(IndexOutOfBoundsError, "%d", idx)
         }
 
-        return &object.String{Value: string(str.Value[idx])}
+        return object.String(str[idx])
 
     default:
         return createError(
@@ -226,16 +224,16 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 }
 
 func evalStringInfixExpression(operator string, left, right object.Object) object.Object {
-    leftVal := left.(*object.String).Value
-    rightVal := right.(*object.String).Value
+    leftVal := left.(object.String)
+    rightVal := right.(object.String)
 
     switch operator {
     case "+":
-        return &object.String{Value: leftVal + rightVal}
+        return object.String(leftVal + rightVal)
     case "==":
-        return createBooleanObject(leftVal == rightVal)
+        return object.Boolean(leftVal == rightVal)
     case "!=":
-        return createBooleanObject(leftVal != rightVal)
+        return object.Boolean(leftVal != rightVal)
     default:
         return createError(UnknownOperatorError, "%s %s %s", left.Type(), operator, right.Type())
     }
@@ -243,44 +241,44 @@ func evalStringInfixExpression(operator string, left, right object.Object) objec
 }
 
 func evalIntegerInfixExpression(operator string, left, right object.Object) object.Object {
-    leftVal := left.(*object.Integer).Value
-    rightVal := right.(*object.Integer).Value
+    leftVal := left.(object.Integer)
+    rightVal := right.(object.Integer)
 
     switch operator {
     case "+":
-        return &object.Integer{Value: leftVal + rightVal}
+        return object.Integer(leftVal + rightVal)
     case "-":
-        return &object.Integer{Value: leftVal - rightVal}
+        return object.Integer(leftVal - rightVal)
     case "*":
-        return &object.Integer{Value: leftVal * rightVal}
+        return object.Integer(leftVal * rightVal)
     case "/":
-        return &object.Integer{Value: leftVal / rightVal}
+        return object.Integer(leftVal / rightVal)
     case "<":
-        return createBooleanObject(leftVal < rightVal)
+        return object.Boolean(leftVal < rightVal)
     case ">":
-        return createBooleanObject(leftVal > rightVal)
+        return object.Boolean(leftVal > rightVal)
     case "==":
-        return createBooleanObject(leftVal == rightVal)
+        return object.Boolean(leftVal == rightVal)
     case "!=":
-        return createBooleanObject(leftVal != rightVal)
+        return object.Boolean(leftVal != rightVal)
     default:
         return createError(UnknownOperatorError, "%s %s %s", left.Type(), operator, right.Type())
     }
 }
 
 func evalBooleanInfixExpression(operator string, left, right object.Object) object.Object {
-    leftVal := left.(*object.Boolean).Value
-    rightVal := right.(*object.Boolean).Value
+    leftVal := left.(object.Boolean)
+    rightVal := right.(object.Boolean)
 
     switch operator {
     case "==":
-        return createBooleanObject(left == right)
+        return object.Boolean(left == right)
     case "!=":
-        return createBooleanObject(left != right)
+        return object.Boolean(left != right)
     case "&&":
-        return createBooleanObject(leftVal && rightVal)
+        return leftVal && rightVal
     case "||":
-        return createBooleanObject(leftVal || rightVal)
+        return leftVal || rightVal
     default:
         return createError(UnknownOperatorError, "%s %s %s", left.Type(), operator, right.Type())
     }
@@ -298,14 +296,12 @@ func evalPrefixOperator(operator string, right object.Object) object.Object {
 }
 
 func evalBangPrefix(right object.Object) object.Object {
-    switch right {
-    case True:
-        return False
-    case False:
-        return True
-    default:
+    b, ok := right.(object.Boolean)
+    if !ok {
         return createError(UnknownOperatorError, "!%s", right.Type())
     }
+
+    return !b
 }
 
 func evalMinusPrefix(right object.Object) object.Object {
@@ -313,8 +309,8 @@ func evalMinusPrefix(right object.Object) object.Object {
         return createError(UnknownOperatorError, "-%s", right.Type())
     }
     
-    val := right.(*object.Integer).Value
-    return &object.Integer{Value: -val}
+    val := right.(object.Integer)
+    return object.Integer(-val)
 }
 
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
@@ -358,10 +354,6 @@ func evalArray(node *ast.ArrayLiteral, env *object.Environment) object.Object {
 func unwrapReturn(obj object.Object) object.Object {
     if ret, ok := obj.(*object.Return); ok { return ret.Value }
     return obj
-}
-
-func createBooleanObject(val bool) object.Object{
-    if val { return True } else { return False }
 }
 
 func createError(errKind string, msg string, args ...any) *object.Error {

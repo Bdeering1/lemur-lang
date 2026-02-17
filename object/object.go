@@ -80,29 +80,20 @@ func (a *Array) String() string {
     return out.String()
 }
 
-type String struct {
-    Value string
-}
-var _ Object = (*String)(nil)
+type String string
+var _ Object = (String)("")
+func (s String) Type() ObjectType { return StringType }
+func (s String) String() string { return string(s) }
 
-func (s *String) Type() ObjectType { return StringType }
-func (s *String) String() string { return fmt.Sprintf("%q", s.Value) }
+type Integer int
+var _ Object = (Integer)(0)
+func (i Integer) Type() ObjectType { return IntegerType }
+func (i Integer) String() string { return fmt.Sprintf("%d", i) }
 
-type Integer struct {
-    Value int64
-}
-var _ Object = (*Integer)(nil)
-
-func (i *Integer) Type() ObjectType { return IntegerType }
-func (i *Integer) String() string { return fmt.Sprintf("%d", i.Value) }
-
-type Boolean struct {
-    Value bool
-}
-var _ Object = (*Boolean)(nil)
-
-func (b *Boolean) Type() ObjectType { return BooleanType }
-func (b *Boolean) String() string { return fmt.Sprintf("%t", b.Value) }
+type Boolean bool
+var _ Object = (Boolean)(false)
+func (b Boolean) Type() ObjectType { return BooleanType }
+func (b Boolean) String() string { return fmt.Sprintf("%t", b) }
 
 type Null struct { // replace with sum type (option)?
     Value bool
