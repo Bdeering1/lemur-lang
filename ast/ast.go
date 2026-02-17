@@ -166,6 +166,29 @@ var _ Expression = (*Identifier)(nil)
 func (i *Identifier) _exprNode(){}
 func (i *Identifier) String() string { return i.Value }
 
+type KVPair struct { Key Expression; Value Expression }
+type HashLiteral struct {
+    Token token.Token
+    Pairs []KVPair
+}
+var _ Expression = (*HashLiteral)(nil)
+
+func (hl *HashLiteral) _exprNode(){}
+func (hl *HashLiteral) String() string {
+    var out strings.Builder
+
+    pairs := []string{}
+    for _, p := range hl.Pairs {
+	pairs = append(pairs, fmt.Sprintf("%s: %s", p.Key, p.Value))
+    }
+
+    out.WriteString("{")
+    out.WriteString(strings.Join(pairs, ", "))
+    out.WriteString("}")
+
+    return out.String()
+}
+
 type ArrayLiteral struct {
     Token token.Token
     Elements []Expression

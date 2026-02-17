@@ -246,6 +246,57 @@ func TestIdentifier(t *testing.T) {
     testIdentifier(t, stmt.Value, "foobar")
 }
 
+type KVPair struct {K any; V any}
+
+func TestHashLiteral(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected []KVPair
+    }{
+        {
+            "{}",
+            []KVPair{},
+        },
+        {
+            `{1: true}`,
+            []KVPair{ {1, true} },
+        },
+        {
+            `{"one": 1, "two": 2}`,
+            []KVPair{ {"one", 1}, {"two", 2} },
+        },
+    }
+
+    for _, tst := range tests {
+        parser, program := runNewParser(t, tst.input, 1)
+        failOnError(t, parser)
+
+        stmt := assertCast[*ast.ExpressionStatement](t, program[0])
+        hl := assertCast[*ast.HashLiteral](t, stmt.Value)
+
+        assert(t, len(hl.Pairs), len(tst.expected))
+        for i, p := range hl.Pairs {
+            switch expdKey := tst.expected[i].K.(type) {
+            case int:
+                testIntegerLiteral(t, p.Key, int64(expdKey))
+            case bool:
+                testBooleanLiteral(t, p.Key, expdKey)
+            case string:
+                testStringLiteral(t, p.Key, expdKey)
+            }
+
+            switch expdValue := tst.expected[i].V.(type) {
+            case int:
+                testIntegerLiteral(t, p.Value, int64(expdValue))
+            case bool:
+                testBooleanLiteral(t, p.Value, expdValue)
+            case string:
+                testStringLiteral(t, p.Value, expdValue)
+            }
+        }
+    }
+}
+
 func TestArrayLiteral(t *testing.T) {
     input := "[1, 2 * 3, 4 + 5]"
 
@@ -254,9 +305,20 @@ func TestArrayLiteral(t *testing.T) {
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
     al := assertCast[*ast.ArrayLiteral](t, stmt.Value)
+    assert(t, len(al.Elements), 3)
     testIntegerLiteral(t, al.Elements[0], 1)
     testInfixExpression(t, al.Elements[1], 2, "*", 3)
     testInfixExpression(t, al.Elements[2], 4, "+", 5)
+}
+
+func TestEmptyArrayLiteral(t *testing.T) {
+    input := "[]"
+    parser, program := runNewParser(t, input, 1)
+    failOnError(t, parser)
+
+    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
+    al := assertCast[*ast.ArrayLiteral](t, stmt.Value)
+    assert(t, len(al.Elements), 0)
 }
 
 func TestIndexExpression(t *testing.T) {
@@ -306,7 +368,7 @@ func TestErrorCases(t *testing.T) {
         input     string
         expdError string
     }{
-        {"{", EOFBeforeClosingBraceError},
+        {"fn(){", EOFBeforeClosingBraceError},
         {"fn(1 + 1){}", NonIdentifierParameterError},
         {"1a", "illegal token: 1a"},
     }
@@ -416,7 +478,7 @@ func assertError(t *testing.T, p *Parser, msg string) {
 
 func assert(t *testing.T, val, expected any) {
     if val != expected {
-        t.Errorf("incorrect value, expected %T: %v (got %T: %v)",
+        t.Fatalf("incorrect value, expected %T: %v (got %T: %v)",
             expected, expected,
             val, val)
     }

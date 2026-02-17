@@ -79,6 +79,7 @@ func New(l *lexer.Lexer) *Parser {
     p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
     p.registerPrefix(token.Illegal, p.parseIllegalToken)
     p.registerPrefix(token.Ident, p.parseIdentifier)
+    p.registerPrefix(token.LBrace, p.parseHashLiteral)
     p.registerPrefix(token.LBracket, p.parseArrayLiteral)
     p.registerPrefix(token.String, p.parseStringLiteral)
     p.registerPrefix(token.Int, p.parseIntegerLiteral)
@@ -131,8 +132,6 @@ func (p *Parser) parseStatement() ast.Statement {
         return p.parseLetStatement()
     case token.Return:
         return p.parseReturnStatement()
-    case token.LBrace:
-        return p.parseBlockStatement()
     default:
         return p.parseExpressionStatement()
     }
@@ -201,15 +200,6 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 }
 
 
-func (p *Parser) parseExpressions(yield func(ast.Expression) bool) {
-    if !yield(p.parseExpression(Lowest)) { return }
-
-    for p.curTokenIs(token.Comma) {
-        p.readToken()
-        if !yield(p.parseExpression(Lowest)) { return }
-    }
-}
-
 func (p *Parser) parseExpression(precedence int) ast.Expression {
     prefix := p.prefixParseFns[p.curToken.Type]
     if prefix == nil {
@@ -264,6 +254,21 @@ func (p *Parser) parseIdentifier() ast.Expression {
     p.readToken()
 
     return i
+}
+
+func (p *Parser) parseHashLiteral() ast.Expression {
+    h := &ast.HashLiteral{
+        Token: p.curToken,
+        Pairs: []ast.KVPair{},
+    }
+    p.readToken()
+
+    if p.skipToken(token.RBrace) { return h }
+    h.Pairs = slices.Collect(p.parseExpressionPairs)
+
+    if !p.expectRead(token.RBrace) { return nil }
+
+    return h
 }
 
 func (p *Parser) parseArrayLiteral() ast.Expression  {
@@ -389,6 +394,38 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 
     return exp
 }
+
+
+func (p *Parser) parseExpressions(yield func(ast.Expression) bool) {
+    if !yield(p.parseExpression(Lowest)) { return }
+
+    for p.curTokenIs(token.Comma) {
+        p.readToken()
+        if !yield(p.parseExpression(Lowest)) { return }
+    }
+}
+
+func (p *Parser) parseExpressionPairs(yield func(ast.KVPair) bool) {
+    k := p.parseExpression(Lowest)
+    if k == nil || !p.skipToken(token.Colon ) { return }
+
+    v := p.parseExpression(Lowest)
+    if v == nil { return }
+
+    if !yield(ast.KVPair{Key: k, Value: v}) { return }
+
+    for p.curTokenIs(token.Comma) {
+        p.readToken()
+        k := p.parseExpression(Lowest)
+        if k == nil || !p.skipToken(token.Colon ) { return }
+
+        v := p.parseExpression(Lowest)
+        if v == nil { return }
+
+        if !yield(ast.KVPair{Key: k, Value: v}) { return }
+    }
+}
+
 
 func (p *Parser) readToken() { p.curToken = p.lex.NextToken() }
 func (p *Parser) curTokenIs(tt token.TokenType) bool { return p.curToken.Type == tt }
