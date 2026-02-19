@@ -277,6 +277,22 @@ func (pe *PrefixExpression) String() string {
     return out.String()
 }
 
+type TupleExpression []Expression
+var _ Expression = (TupleExpression)(nil)
+
+func (te TupleExpression) _exprNode(){}
+func (te TupleExpression) String() string {
+    var out strings.Builder
+
+    exps := []string{}
+    for _, t := range te {
+	exps = append(exps, t.String())
+    }
+    out.WriteString(strings.Join(exps, ", "))
+
+    return out.String()
+}
+
 type InfixExpression struct {
     Token    token.Token
     Operator string

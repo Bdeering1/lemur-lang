@@ -21,6 +21,7 @@ const (
 const (
     _ int = iota
     Lowest
+    Tuple
     AndOr
     Equals
     LessGreater
@@ -171,7 +172,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
     stmt.Name, _ = p.parseIdentifier().(*ast.Identifier)
 
     if !p.expectRead(token.Assign) { return nil }
-    stmt.Value = p.parseExpression(Lowest)
+    stmt.Value = p.parseExpressionOrTuple()
 
     if p.curTokenIs(token.Semicolon) { p.readToken() }
 
@@ -182,7 +183,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
     stmt := &ast.ReturnStatement{Token: p.curToken}
     p.readToken()
 
-    stmt.Value = p.parseExpression(Lowest)
+    stmt.Value = p.parseExpressionOrTuple()
     if p.curTokenIs(token.Semicolon) { p.readToken() }
 
     return stmt
@@ -191,9 +192,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
     stmt := &ast.ExpressionStatement{Token: p.curToken}
 
-    stmt.Value = p.parseExpression(Lowest)
-    if stmt.Value == nil { return nil }
-
+    stmt.Value = p.parseExpressionOrTuple()
     if p.curTokenIs(token.Semicolon) { p.readToken() }
 
     return stmt
@@ -218,6 +217,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
         }
 
         exp = infix(exp)
+        if exp == nil { return nil }
     }
 
     return exp
@@ -395,6 +395,15 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
     return exp
 }
 
+
+func (p *Parser) parseExpressionOrTuple() ast.Expression {
+    e := p.parseExpression(Lowest)
+    if !p.skipToken(token.Comma) { return e }
+
+    exps := slices.Collect(p.parseExpressions)
+
+    return ast.TupleExpression(append([]ast.Expression{e}, exps...))
+}
 
 func (p *Parser) parseExpressions(yield func(ast.Expression) bool) {
     if !yield(p.parseExpression(Lowest)) { return }

@@ -97,6 +97,35 @@ func TestOperatorPrecedence(t *testing.T) {
     }
 }
 
+func TestTupleExpression(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected any
+    }{
+        {"1, 2", []int{1, 2}},
+        {"1 + 1, 2 * 2", nil},
+        {"true && false, a == 1", nil},
+         {"fn(){}, f(1, 2)", nil},
+        {`[true, true], {"a": 1, "b": 2}`, nil},
+    }
+
+    for _, tst := range tests {
+        parser, program := runNewParser(t, tst.input, 1)
+        failOnError(t, parser)
+
+        stmt := assertCast[*ast.ExpressionStatement](t, program[0])
+        te := assertCast[ast.TupleExpression](t, stmt.Value)
+
+        expd, ok := tst.expected.([]int)
+        if !ok { continue }
+
+        assert(t, len(te), len(expd))
+        for idx, e := range expd {
+            i := assertCast[*ast.IntegerLiteral](t, te[idx])
+            assert(t, i.Value, int64(e))
+        }
+    }
+}
 
 func TestInfixExpression(t *testing.T) {
     infixTests := []struct{
