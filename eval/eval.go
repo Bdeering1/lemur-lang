@@ -40,7 +40,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         obj := Eval(node.Value, env)
         if isError(obj) { return obj }
 
-        env.Set(node.Name.Value, obj)
+        env.Set(node.Names[0].Value, obj) // todo: update
         return obj
 
     case *ast.ReturnStatement:

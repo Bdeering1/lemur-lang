@@ -8,7 +8,6 @@ import (
     "lemur/ast"
     "lemur/lexer"
     "lemur/token"
-    "lemur/util"
 )
 
 const (
@@ -162,14 +161,17 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 }
 
 func (p *Parser) parseLetStatement() *ast.LetStatement {
-    stmt := &ast.LetStatement{Token: p.curToken}
+    stmt := &ast.LetStatement{
+        Token: p.curToken,
+        Names: []*ast.Identifier{},
+    }
     p.readToken()
 
-    if !p.curTokenIs(token.Ident) {
+    stmt.Names = p.parseIdentifiers()
+    if stmt.Names == nil {
         p.raiseError(NonIdentifierAssignmentError)
         return nil
     }
-    stmt.Name, _ = p.parseIdentifier().(*ast.Identifier)
 
     if !p.expectRead(token.Assign) { return nil }
     stmt.Value = p.parseExpressionOrTuple()
@@ -330,8 +332,8 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 
     if !p.expectRead(token.LParen) { return nil }
     if !p.skipToken(token.RParen) {
-        var ok bool
-        if l.Parameters, ok = util.CollectAs[*ast.Identifier](p.parseExpressions); !ok {
+        l.Parameters = p.parseIdentifiers()
+        if l.Parameters == nil {
             p.raiseError(NonIdentifierParameterError)
             return nil
         }
@@ -403,6 +405,25 @@ func (p *Parser) parseExpressionOrTuple() ast.Expression {
     exps := slices.Collect(p.parseExpressions)
 
     return ast.TupleExpression(append([]ast.Expression{e}, exps...))
+}
+
+func (p *Parser) parseIdentifiers() []*ast.Identifier {
+    idents := []*ast.Identifier{}
+
+    if !p.curTokenIs(token.Ident) { return nil }
+
+    i := p.parseIdentifier().(*ast.Identifier)
+    idents = append(idents, i)
+
+    for p.curTokenIs(token.Comma) {
+        p.readToken()
+        if !p.curTokenIs(token.Ident) { break }
+
+        i := p.parseIdentifier().(*ast.Identifier)
+        idents = append(idents, i)
+    }
+
+    return idents
 }
 
 func (p *Parser) parseExpressions(yield func(ast.Expression) bool) {

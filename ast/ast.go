@@ -105,7 +105,7 @@ func (bs *BlockStatement) String() string {
 
 type LetStatement struct {
     Token token.Token
-    Name *Identifier
+    Names []*Identifier
     Value Expression
 }
 var _ Statement = (*LetStatement)(nil)
@@ -116,7 +116,13 @@ func (ls *LetStatement) String() string {
 
     out.WriteString(ls.Token.Literal)
     out.WriteString(" ")
-    out.WriteString(ls.Name.String())
+
+    names := []string{}
+    for _, n := range ls.Names {
+	names = append(names, n.String())
+    }
+
+    out.WriteString(strings.Join(names, ", "))
     out.WriteString(" = ")
     out.WriteString(ls.Value.String())
     out.WriteString(";")

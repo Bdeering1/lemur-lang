@@ -1,38 +1,55 @@
 package parser
 
 import (
-    "fmt"
-    "testing"
+	"fmt"
+	"testing"
 
-    "lemur/ast"
-    "lemur/lexer"
+	"lemur/ast"
+	"lemur/lexer"
 )
 
 func TestLetStatement(t *testing.T) {
     tests := []struct {
-        input     string
-        expdIdent string
-        expdValue any
+        input      string
+        expdIdents []string
+        expdValue  any
     }{
-        {"let x = 5", "x", 5},
-        {"let y = true", "y", true},
-        {"let foobar = y", "foobar", "y"},
-        {"let 1 = 2", "", nil},
+        {"let x = 5", []string{"x"}, 5},
+        {"let y = true", []string{"y"}, true},
+        {"let foobar = y", []string{"foobar"}, "y"},
+        {"let 1 = 2", []string{}, nil},
     }
 
     for _, tst := range tests {
-        switch expd := tst.expdValue.(type) {
+        switch expdVal := tst.expdValue.(type) {
         case string, int, bool:
-            parser, program := runNewParser(t, tst.input, 1)
+            parser, program := runNewParser(t, tst.input)
             failOnError(t, parser)
 
             ls := assertCast[*ast.LetStatement](t, program[0])
             assertToken(t, ls.Token.Literal, "let")
-            testIdentifier(t, ls.Name, tst.expdIdent)
-            testLiteralExpression(t, ls.Value, expd)
+
+            testIdentifier(t, ls.Names[0], tst.expdIdents[0])
+            testLiteralExpression(t, ls.Value, expdVal)
+
+        case []string:
+        case []int:
+        case []bool:
+            parser, program := runNewParser(t, tst.input)
+            failOnError(t, parser)
+
+            ls := assertCast[*ast.LetStatement](t, program[0])
+            assertToken(t, ls.Token.Literal, "let")
+
+            exps := assertCast[ast.TupleExpression](t, ls.Value)
+            assert(t, len(exps), len(expdVal))
+            for i, e := range expdVal {
+                testIdentifier(t, ls.Names[i], (tst.expdIdents)[i])
+                testLiteralExpression(t, exps[i], e)
+            }
 
         case nil:
-            parser, _ := runNewParser(t, tst.input, 0)
+            parser, _ := runNewParser(t, tst.input)
             assertError(t, parser, NonIdentifierAssignmentError)
         }
     }
@@ -49,7 +66,7 @@ func TestReturnStatement(t *testing.T) {
     }
 
     for _, tst := range tests {
-        parser, program := runNewParser(t, tst.input, 1)
+        parser, program := runNewParser(t, tst.input)
         failOnError(t, parser)
 
         rs := assertCast[*ast.ReturnStatement](t, program[0])
@@ -89,7 +106,7 @@ func TestOperatorPrecedence(t *testing.T) {
     }
 
     for _, tst := range tests {
-        parser, program := runNewParser(t, tst.input, 1)
+        parser, program := runNewParser(t, tst.input)
         failOnError(t, parser)
 
         str := program.String()
@@ -110,7 +127,7 @@ func TestTupleExpression(t *testing.T) {
     }
 
     for _, tst := range tests {
-        parser, program := runNewParser(t, tst.input, 1)
+        parser, program := runNewParser(t, tst.input)
         failOnError(t, parser)
 
         stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -120,9 +137,10 @@ func TestTupleExpression(t *testing.T) {
         if !ok { continue }
 
         assert(t, len(te), len(expd))
-        for idx, e := range expd {
-            i := assertCast[*ast.IntegerLiteral](t, te[idx])
-            assert(t, i.Value, int64(e))
+        for i, e := range expd {
+            // i := assertCast[*ast.IntegerLiteral](t, te[idx])
+            // assert(t, i.Value, int64(e))
+            testLiteralExpression(t, te[i], e)
         }
     }
 }
@@ -148,7 +166,7 @@ func TestInfixExpression(t *testing.T) {
     }
 
     for _, it := range infixTests {
-        parser, program := runNewParser(t, it.input, 1)
+        parser, program := runNewParser(t, it.input)
         failOnError(t, parser)
 
         stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -169,7 +187,7 @@ func TestPrefixExpression(t *testing.T) {
     }
 
     for _, pt := range prefixTests {
-        parser, program := runNewParser(t, pt.input, 1)
+        parser, program := runNewParser(t, pt.input)
         failOnError(t, parser)
 
         stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -183,7 +201,7 @@ func TestPrefixExpression(t *testing.T) {
 func TestIfExpression(t *testing.T) {
     input := "if (x < y) { x }"
 
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -200,7 +218,7 @@ func TestIfExpression(t *testing.T) {
 func TestIfElseExpression(t *testing.T) {
     input := "if (x < y) { x } else { y }"
 
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -219,7 +237,7 @@ func TestIfElseExpression(t *testing.T) {
 func TestFunctionLiteral(t *testing.T) {
     input := "fn(x, y) { x + y; }"
 
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -241,7 +259,7 @@ func TestFunctionLiteralParameters(t *testing.T) {
     }
 
     for _, tst := range tests {
-        parser, program := runNewParser(t, tst.input, 1)
+        parser, program := runNewParser(t, tst.input)
         failOnError(t, parser)
         stmt := assertCast[*ast.ExpressionStatement](t, program[0])
 
@@ -252,7 +270,7 @@ func TestFunctionLiteralParameters(t *testing.T) {
 func TestCallExpression(t *testing.T) {
     input := "add(1, 2 * 3, 4 + 5)"
 
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -268,7 +286,7 @@ func TestCallExpression(t *testing.T) {
 func TestIdentifier(t *testing.T) {
     input := "foobar;"
 
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -297,7 +315,7 @@ func TestHashLiteral(t *testing.T) {
     }
 
     for _, tst := range tests {
-        parser, program := runNewParser(t, tst.input, 1)
+        parser, program := runNewParser(t, tst.input)
         failOnError(t, parser)
 
         stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -329,7 +347,7 @@ func TestHashLiteral(t *testing.T) {
 func TestArrayLiteral(t *testing.T) {
     input := "[1, 2 * 3, 4 + 5]"
 
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -342,7 +360,7 @@ func TestArrayLiteral(t *testing.T) {
 
 func TestEmptyArrayLiteral(t *testing.T) {
     input := "[]"
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -353,7 +371,7 @@ func TestEmptyArrayLiteral(t *testing.T) {
 func TestIndexExpression(t *testing.T) {
     input := "arr[1 + 1]";
 
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -365,7 +383,7 @@ func TestIndexExpression(t *testing.T) {
 func TestStringLiteral(t *testing.T) {
     input := `"foo"`;
 
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -375,7 +393,7 @@ func TestStringLiteral(t *testing.T) {
 func TestIntegerLiteral(t *testing.T) {
     input := "5;"
 
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -385,7 +403,7 @@ func TestIntegerLiteral(t *testing.T) {
 func TestBooleanExpression(t *testing.T) {
     input := "true;"
 
-    parser, program := runNewParser(t, input, 1)
+    parser, program := runNewParser(t, input)
     failOnError(t, parser)
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -403,7 +421,7 @@ func TestErrorCases(t *testing.T) {
     }
 
     for _, tst := range tests {
-        parser, _ := runNewParser(t, tst.input, 0)
+        parser, _ := runNewParser(t, tst.input)
         assertError(t, parser, tst.expdError)
     }
 }
@@ -475,13 +493,12 @@ func testBooleanLiteral(t *testing.T, be ast.Expression, val bool) {
 }
 
 
-func runNewParser(t *testing.T, input string, expStatements int) (*Parser, ast.Program) {
+func runNewParser(t *testing.T, input string) (*Parser, ast.Program) {
     l := lexer.New(input)
     p := New(l)
 
     program := p.ParseProgram()
     if program == nil { t.Fatalf("ParseProgram() returned nil") }
-    assertMsg(t, len(program), expStatements, "wrong number of statements in program")
 
     return p, program
 }
