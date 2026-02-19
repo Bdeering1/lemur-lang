@@ -18,6 +18,9 @@ func TestLetStatement(t *testing.T) {
         {"let y = true", []string{"y"}, true},
         {"let foobar = y", []string{"foobar"}, "y"},
         {"let 1 = 2", []string{}, nil},
+        {"let a, b = 1, 2", []string{}, []int{1, 2}},
+        {"let a, b = true, false", []string{}, []int{1, 2}},
+        {`let a, b, c = "a", "b", "c"`, []string{}, []string{"a", "b", "c"}},
     }
 
     for _, tst := range tests {
