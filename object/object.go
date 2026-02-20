@@ -16,6 +16,7 @@ type Object interface {
 type ObjectType string // this can be a numeric enum
 
 const (
+    TupleType	 = "Tuple"
     BuiltinType  = "Builtin"
     FunctionType = "Function"
     HashMapType	 = "HashMap"
@@ -30,6 +31,25 @@ const (
 
 type ValueObject interface { _valueObject() }
 
+
+type Tuple []Object
+var _ Object = (Tuple)(nil)
+
+func (t Tuple) Type() ObjectType { return TupleType }
+func (t Tuple) String() string {
+    var out strings.Builder
+
+    elems := []string{}
+    for _, el := range t {
+	elems = append(elems, el.String())
+    }
+
+    out.WriteString("(")
+    out.WriteString(strings.Join(elems, ", "))
+    out.WriteString(")")
+
+    return out.String()
+}
 
 type Builtin func(args ...Object) Object
 var _ Object = (Builtin)(nil)

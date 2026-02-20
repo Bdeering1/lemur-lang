@@ -174,7 +174,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
     }
 
     if !p.expectRead(token.Assign) { return nil }
-    stmt.Value = p.parseExpressionOrTuple()
+    stmt.Values = slices.Collect(p.parseExpressions)
 
     if p.curTokenIs(token.Semicolon) { p.readToken() }
 

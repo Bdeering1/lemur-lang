@@ -13,40 +13,72 @@ type Error string
 func TestLetStatement(t *testing.T) {
     tests := []struct{
         input    string
-        expected int
+        expected any
     }{
         {"let a = 5; a", 5},
         {"let a = 2 + 3; a", 5},
         {"let a = 5; let b = a; b", 5},
         {"let a = 2; let b = 3; a + b", 5},
+        {"let a, b = 1, 2; a, b", []int{1, 2}},
+        {"let a, b = 1 + 1, 2 * 2; a, b", []int{2, 4}},
+        {"let a, b = true && false, true || false; a, b", []bool{false, true}},
+        {"let a, b, c = fn(){1}(), [2][0], {3: 3}[3]; a, b, c", []int{1, 2, 3}},
     }
-
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        res := assertCast[object.Integer](t, i, obj)
-        assert(t, i, res, object.Integer(tst.expected))
+        switch expd := tst.expected.(type) {
+        case int:
+            res := assertCast[object.Integer](t, i, obj)
+            assert(t, i, res, object.Integer(expd))
+        case []int:
+            vals := assertCast[object.Tuple](t, i, obj)
+            assert(t, i, len(vals), len(expd))
+
+            for i, e := range expd {
+                assert(t, i, vals[i], object.Integer(e))
+            }
+        case []bool:
+            vals := assertCast[object.Tuple](t, i, obj)
+            assert(t, i, len(vals), len(expd))
+
+            for i, e := range expd {
+                assert(t, i, vals[i], object.Boolean(e))
+            }
+        }
     }
 }
 
 func TestReturnStatement(t *testing.T) {
     tests := []struct{
         input    string
-        expected int
+        expected any
     }{
         {"return 10", 10},
         {"return 10; 9", 10},
         {"return 2 * 5; 9", 10},
         {"8; return 2 * 5; 9", 10},
+        {"return 1, 2", []int{1, 2}},
+        {"return 1, 2; 3", []int{1, 2}},
     }
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
-
         ret := assertCast[*object.Return](t, i, obj)
-        n := assertCast[object.Integer](t, i, ret.Value)
-        assert(t, i, n, object.Integer(tst.expected))
+
+        switch expd := tst.expected.(type) {
+        case int:
+            n := assertCast[object.Integer](t, i, ret.Value)
+            assert(t, i, n, object.Integer(expd))
+        case []int:
+            vals := assertCast[object.Tuple](t, i, ret.Value)
+
+            assert(t, i, len(vals), len(expd))
+            for i, e := range expd {
+                assert(t, i, vals[i], object.Integer(e))
+            }
+        }
     }
 }
 

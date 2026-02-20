@@ -37,11 +37,14 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         return evalBlock(node.Statements, innerEnv)
 
     case *ast.LetStatement:
-        obj := Eval(node.Value, env)
+        obj := Eval(node.Values, env)
         if isError(obj) { return obj }
 
-        env.Set(node.Names[0].Value, obj) // todo: update
-        return obj
+        values := obj.(object.Tuple)
+        for i, n := range node.Names  {
+            env.Set(n.Value, values[i])
+        }
+        return values
 
     case *ast.ReturnStatement:
         obj := Eval(node.Value, env)
@@ -51,6 +54,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
     case *ast.ExpressionStatement:
         return Eval(node.Value, env)
+
+    case ast.TupleExpression:
+        return evalTupleExpression(node, env)
 
     case *ast.FunctionLiteral:
         return &object.Function{Parameters: node.Parameters, Body: node.Body, OuterEnv: env}
@@ -127,6 +133,19 @@ func evalBlock(block []ast.Statement, env *object.Environment) object.Object {
     }
 
     return obj
+}
+
+func evalTupleExpression(tuple ast.TupleExpression, env *object.Environment) object.Object {
+    t := object.Tuple{}
+
+    for _, e := range tuple {
+        o := Eval(e, env)
+        if isError(o) { return o }
+
+        t = append(t, o)
+    }
+
+    return t
 }
 
 func evalBuiltin(f object.Builtin, argExprs []ast.Expression, env *object.Environment) object.Object {

@@ -10,13 +10,17 @@ func TestString(t *testing.T) {
     program := &Program{
         &LetStatement{
             Token: token.New(token.Let, "let"),
-            Name: &Identifier{
-                Token: token.New(token.Ident, "myVar"),
-                Value: "myVar",
+            Names: []*Identifier{
+                {
+                    Token: token.New(token.Ident, "myVar"),
+                    Value: "myVar",
+                },
             },
-            Value: &Identifier{
-                Token: token.New(token.Ident, "anotherVar"),
-                Value: "anotherVar",
+            Values: TupleExpression{
+                &Identifier{
+                    Token: token.New(token.Ident, "anotherVar"),
+                    Value: "anotherVar",
+                },
             },
         },
     }
