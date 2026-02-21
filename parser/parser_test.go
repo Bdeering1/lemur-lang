@@ -419,6 +419,7 @@ func TestErrorCases(t *testing.T) {
         {"fn(){", EOFBeforeClosingBraceError},
         {"fn(1 + 1){}", NonIdentifierParameterError},
         {"1a", "illegal token: 1a"},
+        {"let a, a = 1, 2", "duplicate identifier in variable assignment: a"},
     }
 
     for _, tst := range tests {

@@ -11,10 +11,11 @@ import (
 )
 
 const (
-    EOFBeforeClosingBraceError   = "reached EOF before closing brace in block statement (missing '}')"
-    IllegalTokenError            = "illegal token"
-    NonIdentifierAssignmentError = "non-identifier expression after let keyword"
-    NonIdentifierParameterError  = "non-identifier expression in function parameters"
+    EOFBeforeClosingBraceError     = "reached EOF before closing brace in block statement (missing '}')"
+    IllegalTokenError              = "illegal token"
+    NonIdentifierAssignmentError   = "non-identifier expression after let keyword"
+    NonIdentifierParameterError    = "non-identifier expression in function parameters"
+    DuplicateIdentifierAssignError = "duplicate identifier in variable assignment"
 )
 
 const (
@@ -171,6 +172,15 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
     if stmt.Names == nil {
         p.raiseError(NonIdentifierAssignmentError)
         return nil
+    }
+
+    seen := make(map[string]struct{}, len(stmt.Names))
+    for _, n := range stmt.Names {
+        if _, exists := seen[n.Value]; exists {
+            p.raiseError(fmt.Sprintf("%s: %s", DuplicateIdentifierAssignError, n.Value))
+            return nil
+        }
+        seen[n.Value] = struct{}{}
     }
 
     if !p.expectRead(token.Assign) { return nil }
@@ -398,19 +408,9 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 }
 
 
-func (p *Parser) parseExpressionOrTuple() ast.Expression {
-    e := p.parseExpression(Lowest)
-    if !p.skipToken(token.Comma) { return e }
-
-    exps := slices.Collect(p.parseExpressions)
-
-    return ast.TupleExpression(append([]ast.Expression{e}, exps...))
-}
-
 func (p *Parser) parseIdentifiers() []*ast.Identifier {
-    idents := []*ast.Identifier{}
-
     if !p.curTokenIs(token.Ident) { return nil }
+    idents := []*ast.Identifier{}
 
     i := p.parseIdentifier().(*ast.Identifier)
     idents = append(idents, i)
@@ -424,6 +424,15 @@ func (p *Parser) parseIdentifiers() []*ast.Identifier {
     }
 
     return idents
+}
+
+func (p *Parser) parseExpressionOrTuple() ast.Expression {
+    e := p.parseExpression(Lowest)
+    if !p.skipToken(token.Comma) { return e }
+
+    exps := slices.Collect(p.parseExpressions)
+
+    return ast.TupleExpression(append([]ast.Expression{e}, exps...))
 }
 
 func (p *Parser) parseExpressions(yield func(ast.Expression) bool) {
