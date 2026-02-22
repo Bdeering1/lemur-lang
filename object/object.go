@@ -51,10 +51,10 @@ func (t Tuple) String() string {
     return out.String()
 }
 
-type Builtin func(args ...Object) Object
+type Builtin func(args []Object) Object
 var _ Object = (Builtin)(nil)
 func (b Builtin) Type() ObjectType { return BuiltinType }
-func (b Builtin) String() string { return "builtin function" }	
+func (b Builtin) String() string { return "builtin function" }
 
 type Function struct {
     Parameters []*ast.Identifier

@@ -7,17 +7,18 @@ import (
 )
 
 const (
-    Puts  = "puts"
-    Len   = "len"
-    First = "first"
-    Last  = "last"
-    Head  = "head"
-    Tail  = "tail"
-    Push  = "push"
+    Puts    = "puts"
+    Len     = "len"
+    First   = "first"
+    Last    = "last"
+    Head    = "head"
+    Tail    = "tail"
+    Push    = "push"
+    Iter    = "iter"
 )
 
 var builtins = map[string]object.Builtin{
-    Puts: func(args ...object.Object) object.Object {
+    Puts: func(args []object.Object) object.Object {
         for _, arg := range args {
             fmt.Printf("%s ", arg)
         }
@@ -25,7 +26,7 @@ var builtins = map[string]object.Builtin{
 
         return Null
     },
-    Len: func(args ...object.Object) object.Object {
+    Len: func(args []object.Object) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Len)
         }
@@ -39,7 +40,7 @@ var builtins = map[string]object.Builtin{
             return createError(ArgumentTypesError, "%s(%s)", Len,  input.Type())
         }
     },
-    First: func(args ...object.Object) object.Object {
+    First: func(args []object.Object) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", First)
         }
@@ -55,7 +56,7 @@ var builtins = map[string]object.Builtin{
             return createError(ArgumentTypesError, "%s(%s)", First,  input.Type())
         }
     },
-    Last: func(args ...object.Object) object.Object {
+    Last: func(args []object.Object) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Last)
         }
@@ -71,7 +72,7 @@ var builtins = map[string]object.Builtin{
             return createError(ArgumentTypesError, "%s(%s)", Last,  input.Type())
         }
     },
-    Head: func(args ...object.Object) object.Object {
+    Head: func(args []object.Object) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Head)
         }
@@ -87,7 +88,7 @@ var builtins = map[string]object.Builtin{
             return createError(ArgumentTypesError, "%s(%s)", Head,  input.Type())
         }
     },
-    Tail: func(args ...object.Object) object.Object {
+    Tail: func(args []object.Object) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Tail)
         }
@@ -103,7 +104,7 @@ var builtins = map[string]object.Builtin{
             return createError(ArgumentTypesError, "%s(%s)", Tail, input.Type())
         }
     },
-    Push: func(args ...object.Object) object.Object {
+    Push: func(args []object.Object) object.Object {
         if len(args) != 2 {
             return createError(ArgumentMistmatchError, "%s", Push)
         }
@@ -138,4 +139,70 @@ var builtins = map[string]object.Builtin{
                 Push, col.Type(), args[1].Type())
         }
     },
+    Iter: func(args []object.Object) object.Object {
+        if len(args) != 1 {
+            return createError(ArgumentMistmatchError, "%s", Iter)
+        }
+
+        switch col := args[0].(type) {
+        case *object.Array:
+            idx := 0
+
+            var f object.Builtin
+            f = func(args []object.Object) object.Object {
+                if idx >= len(col.Elements) {
+                    return object.Tuple{
+                        zero(col.ElementType),
+                        object.Boolean(false),
+                    }
+                }
+
+                res := col.Elements[idx]; idx++
+                return object.Tuple{
+                    res,
+                    object.Boolean(true),
+                }
+            }
+            return f
+
+        case object.String:
+            idx := 0
+
+            var f object.Builtin
+            f = func(args []object.Object) object.Object {
+                if idx >= len(col) {
+                    return object.Tuple{
+                        zero(object.StringType),
+                        object.Boolean(false),
+                    }
+                }
+
+                res := object.String(string(col[idx])); idx++
+                return object.Tuple{
+                    res,
+                    object.Boolean(true),
+                }
+            }
+            return f
+
+        default:
+            return createError(
+                ArgumentTypesError,
+                "%s(%v)",
+                Iter, col.Type())
+        }
+    },
+}
+
+func zero(t object.ObjectType) object.Object {
+    switch t {
+    case object.StringType:
+        return object.String("")
+    case object.IntegerType:
+        return object.Integer(0)
+    case object.BooleanType:
+        return object.Boolean(false)
+    }
+
+    return Null
 }

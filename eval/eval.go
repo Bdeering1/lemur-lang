@@ -158,7 +158,7 @@ func evalBuiltin(f object.Builtin, argExprs []ast.Expression, env *object.Enviro
         args = append(args, o)
     }
 
-    return f(args...)
+    return f(args)
 }
 
 func evalFunction(f *object.Function, args []ast.Expression, env *object.Environment) object.Object {
