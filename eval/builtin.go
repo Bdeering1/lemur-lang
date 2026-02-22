@@ -15,6 +15,7 @@ const (
     Tail    = "tail"
     Push    = "push"
     Iter    = "iter"
+    Collect = "collect"
 )
 
 var builtins = map[string]object.Builtin{
@@ -190,6 +191,38 @@ var builtins = map[string]object.Builtin{
                 ArgumentTypesError,
                 "%s(%v)",
                 Iter, col.Type())
+        }
+    },
+    Collect: func(args []object.Object) object.Object { // only creates arrays for now
+        if len(args) != 1 {
+            return createError(ArgumentMistmatchError, "%s", Collect)
+        }
+
+        next, ok := args[0].(object.Builtin)
+        if !ok {
+            return createError(ArgumentTypesError, "%s(%s)", Collect, args[0].Type())
+        }
+
+        arr := &object.Array{
+            Elements: []object.Object{},
+            ElementType: object.NullType,
+        }
+
+        t := next([]object.Object{}).(object.Tuple)
+        val := t[0]
+        ok = bool(t[1].(object.Boolean))
+
+        if !ok { return arr }
+        arr.ElementType = val.Type()
+        arr.Elements = append(arr.Elements, val)
+
+        for {
+            t = next([]object.Object{}).(object.Tuple)
+            val = t[0]
+            ok = bool(t[1].(object.Boolean))
+
+            if !ok { return arr }
+            arr.Elements = append(arr.Elements, val)
         }
     },
 }

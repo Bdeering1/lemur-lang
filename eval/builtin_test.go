@@ -57,6 +57,12 @@ func TestBuiltinFunction(t *testing.T) { // these should use builtin constants
         {"iter()", Error(ArgumentMistmatchError + ": iter")},
         {"iter(1)", Error(ArgumentTypesError+ ": iter(Integer)")},
         {"iter(true)", Error(ArgumentTypesError + ": iter(Boolean)")},
+        {"collect()", Error(ArgumentMistmatchError + ": collect")},
+        {`collect("")`, Error(ArgumentTypesError + ": collect(String)")},
+        {"collect(1)", Error(ArgumentTypesError + ": collect(Integer)")},
+        {"collect(true)", Error(ArgumentTypesError + ": collect(Boolean)")},
+        {"collect([])", Error(ArgumentTypesError + ": collect(Array)")},
+        {"collect({})", Error(ArgumentTypesError + ": collect(HashMap)")},
     }
 
     for i, tst := range tests {
@@ -72,12 +78,12 @@ func TestBuiltinFunction(t *testing.T) { // these should use builtin constants
                 res := el.(object.Integer)
                 assert(t, i, int(res), expd[idx])
             }
-        case Error:
-            res := assertCast[*object.Error](t, i, obj)
-            assert(t, i, res.Message, string(expd))
         case string:
             res := assertCast[object.String](t, i, obj)
             assert(t, i, string(res), expd)
+        case Error:
+            res := assertCast[*object.Error](t, i, obj)
+            assert(t, i, res.Message, string(expd))
         case nil:
             assert(t, i, obj, Null)
         }
@@ -119,10 +125,10 @@ func TestBuiltinIterator(t *testing.T) {
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
-        f := assertCast[object.Builtin](t, i, obj)
+        next := assertCast[object.Builtin](t, i, obj)
 
         for _, expd := range tst.expected {
-            obj := f([]object.Object{})
+            obj := next([]object.Object{})
             vals := assertCast[object.Tuple](t, i, obj)
             assert(t, i, len(vals), 2)
 
@@ -141,6 +147,45 @@ func TestBuiltinIterator(t *testing.T) {
             }
             ok := assertCast[object.Boolean](t, i, vals[1])
             assert(t, i, bool(ok), expd.Ok)
+        }
+    }
+}
+
+func TestBuiltinCollect(t *testing.T) {
+    tests := []struct{
+        input    string
+        expected any
+    }{
+        {"let n = iter([]); collect(n)", []int{}},
+        {"let n = iter([1, 2, 3]); collect(n)", []int{1, 2, 3}},
+        {`let n = iter(["one", "two", "three"]); collect(n)`, []string{"one", "two", "three"}},
+        // {`iter("")`, ""},
+        // {`iter("abc")`, "abc"},
+    }
+
+    for i, tst := range tests {
+        obj := runNewEval(tst.input)
+
+        switch expd := tst.expected.(type) {
+        case []string:
+            arr := assertCast[*object.Array](t, i, obj)
+            assert(t, i, len(arr.Elements), len(expd))
+
+            for idx, el := range arr.Elements {
+                res := el.(object.String)
+                assert(t, i, string(res), expd[idx])
+            }
+        case []int:
+            arr := assertCast[*object.Array](t, i, obj)
+            assert(t, i, len(arr.Elements), len(expd))
+
+            for idx, el := range arr.Elements {
+                res := el.(object.Integer)
+                assert(t, i, int(res), expd[idx])
+            }
+        case string: // this is possible if char type is added
+            res := obj.(object.String)
+            assert(t, i, string(res), expd)
         }
     }
 }
