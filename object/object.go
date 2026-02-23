@@ -24,12 +24,28 @@ const (
     StringType	 = "String"
     IntegerType  = "Integer"
     BooleanType  = "Boolean"
-    NullType     = "Null"
     ReturnType   = "Return"
     ErrorType    = "Error"
+    NullType     = ""
 )
 
 type ValueObject interface { _valueObject() }
+
+
+func Default(t ObjectType) Object {
+    switch t {
+    case ArrayType:
+	return &Array{Elements: []Object{}}
+    case StringType:
+	return String("")
+    case IntegerType:
+	return Integer(0)
+    case BooleanType:
+	return Boolean(false)
+    default:
+	return NullObject(false)
+    }
+}
 
 
 type Tuple []Object
@@ -51,7 +67,7 @@ func (t Tuple) String() string {
     return out.String()
 }
 
-type Builtin func(args []Object) Object
+type Builtin func(args []Object, env *Environment) Object
 var _ Object = (Builtin)(nil)
 func (b Builtin) Type() ObjectType { return BuiltinType }
 func (b Builtin) String() string { return "builtin function" }
@@ -164,10 +180,9 @@ var _ Object = (*Error)(nil)
 func (e *Error) Type() ObjectType { return ErrorType }
 func (e *Error) String() string { return "Error: " + e.Message }
 
-type Null struct { // replace with sum type (option)?
-    Value bool
-}
-var _ Object = (*Null)(nil)
+type NullObject bool
+var _ Object = (NullObject)(false)
+func (b NullObject) Type() ObjectType { return NullType }
+func (b NullObject) String() string { return "null" }
 
-func (b *Null) Type() ObjectType { return NullType }
-func (b *Null) String() string { return "null" }
+var Null = NullObject(false)

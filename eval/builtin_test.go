@@ -57,6 +57,12 @@ func TestBuiltinFunction(t *testing.T) { // these should use builtin constants
         {"iter()", Error(ArgumentMistmatchError + ": iter")},
         {"iter(1)", Error(ArgumentTypesError+ ": iter(Integer)")},
         {"iter(true)", Error(ArgumentTypesError + ": iter(Boolean)")},
+        {"map()", Error(ArgumentMistmatchError + ": map")},
+        {"map(iter([]))", Error(ArgumentMistmatchError + ": map")},
+        {`map(iter([]), "abc")`, Error(ArgumentTypesError + ": map(Builtin, String)")},
+        {"map(iter([]), 1)", Error(ArgumentTypesError + ": map(Builtin, Integer)")},
+        {"map(iter([]), true)", Error(ArgumentTypesError + ": map(Builtin, Boolean)")},
+        {"map(iter([]), fn(){})", Error(ArgumentTypesError + ": map requires function with 1 parameter (got 0)")},
         {"collect()", Error(ArgumentMistmatchError + ": collect")},
         {`collect("")`, Error(ArgumentTypesError + ": collect(String)")},
         {"collect(1)", Error(ArgumentTypesError + ": collect(Integer)")},
@@ -85,14 +91,14 @@ func TestBuiltinFunction(t *testing.T) { // these should use builtin constants
             res := assertCast[*object.Error](t, i, obj)
             assert(t, i, res.Message, string(expd))
         case nil:
-            assert(t, i, obj, Null)
+            assert(t, i, obj, object.Null)
         }
     }
 }
 
 type IterPair struct { V any; Ok bool}
 
-func TestBuiltinIterator(t *testing.T) {
+func TestBuiltinIteratorMap(t *testing.T) {
     tests := []struct{
         input    string
         expected []IterPair
@@ -121,14 +127,33 @@ func TestBuiltinIterator(t *testing.T) {
             `iter("abc")`,
             []IterPair{ {"a", true}, {"b", true}, {"c", true}, {"", false} },
         },
+        {
+            "map(iter([]), fn(x){ x })",
+            []IterPair{ {nil, false} },
+        },
+        {
+            `map(iter(["1", "2"]), fn(x){ x + "a" })`,
+            []IterPair{ {"1a", true}, {"2a", true}, {"", false} },
+        },
+        {
+            "map(iter([1, 2]), fn(x){ x * 2 })",
+            []IterPair{ {2, true}, {4, true}, {0, false} },
+        },
+        {
+            `map(iter(""), fn(x){ x + "a"})`,
+            []IterPair{ {"", false} },
+        },
+        {
+            `map(iter("abc"), fn(x){ x + "a"})`,
+            []IterPair{ {"aa", true}, {"ba", true}, {"ca", true}, {"", false} },
+        },
     }
-
     for i, tst := range tests {
         obj := runNewEval(tst.input)
         next := assertCast[object.Builtin](t, i, obj)
 
         for _, expd := range tst.expected {
-            obj := next([]object.Object{})
+            obj := next([]object.Object{}, nil)
             vals := assertCast[object.Tuple](t, i, obj)
             assert(t, i, len(vals), 2)
 
@@ -143,8 +168,9 @@ func TestBuiltinIterator(t *testing.T) {
                 val := assertCast[object.Boolean](t, i, vals[0])
                 assert(t, i, bool(val), expd.V)
             case nil:
-                assert(t, i, vals[0], Null)
+                assert(t, i, vals[0], object.Null)
             }
+
             ok := assertCast[object.Boolean](t, i, vals[1])
             assert(t, i, bool(ok), expd.Ok)
         }

@@ -23,7 +23,9 @@ const (
     InternalErrorPostfix        = " (internal)"
 )
 
-var Null = &object.Null{}
+var b BuiltinProvider = B{}
+var builtins map[string]object.Builtin
+func init() { builtins = b.Builtins() }
 
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
@@ -123,7 +125,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 }
 
 func evalBlock(block []ast.Statement, env *object.Environment) object.Object {
-    if len(block) == 0 { return Null } // no-op
+    if len(block) == 0 { return object.Null } // no-op
     var obj object.Object
 
     for _, stmt := range block {
@@ -158,7 +160,7 @@ func evalBuiltin(f object.Builtin, argExprs []ast.Expression, env *object.Enviro
         args = append(args, o)
     }
 
-    return f(args)
+    return f(args, env)
 }
 
 func evalFunction(f *object.Function, args []ast.Expression, env *object.Environment) object.Object {
@@ -188,7 +190,7 @@ func evalConditionalExpression(ce *ast.ConditionalExpression, env *object.Enviro
 
     if cond { return Eval(ce.Consequence, env) }
 
-    if ce.Alternative == nil { return Null } // default value for type or no-op
+    if ce.Alternative == nil { return object.Null } // default value for type or no-op
     return Eval(ce.Alternative, env)
 }
 
@@ -203,7 +205,7 @@ func evalIndexExpression(left, index ast.Expression, env *object.Environment) ob
     case leftObj.Type() == object.HashMapType && isValueObject(indexObj):
         hm := leftObj.(*object.HashMap)
 
-        if hm.KeyType == object.NullType { return Null }
+        if hm.KeyType == object.NullType { return object.Null }
         if indexObj.Type() != hm.KeyType {
             return createError(
                 TypeMismatchError,
@@ -212,7 +214,7 @@ func evalIndexExpression(left, index ast.Expression, env *object.Environment) ob
         }
 
         res, ok := hm.Pairs[indexObj]
-        if !ok { return Null }
+        if !ok { return object.Null }
 
         return res
 

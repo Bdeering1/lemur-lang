@@ -149,7 +149,7 @@ func TestConditionalExpression(t *testing.T) {
             res := assertCast[*object.Error](t, i, obj)
             assert(t, i, res.Message, string(expd))
         case nil:
-            assert(t, i, obj, Null)
+            assert(t, i, obj, object.Null)
         }
     }
 }
@@ -299,7 +299,7 @@ func TestIndexExpression(t *testing.T) {
             res := assertCast[*object.Error](t, i, obj)
             assert(t, i, res.Message, string(expd))
         case nil:
-            assert(t, i, obj, Null)
+            assert(t, i, obj, object.Null)
         }
     }
 }

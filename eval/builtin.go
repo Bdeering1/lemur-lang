@@ -6,6 +6,16 @@ import (
     "lemur/object"
 )
 
+type BuiltinProvider interface { // this garbage prevents cyclical imports
+    Builtins() map[string]object.Builtin
+}
+
+type B struct {}
+func (b B) Builtins() map[string]object.Builtin {
+    return fns
+}
+
+
 const (
     Puts    = "puts"
     Len     = "len"
@@ -15,19 +25,20 @@ const (
     Tail    = "tail"
     Push    = "push"
     Iter    = "iter"
+    Map     = "map"
     Collect = "collect"
 )
 
-var builtins = map[string]object.Builtin{
-    Puts: func(args []object.Object) object.Object {
+var fns = map[string]object.Builtin{
+    Puts: func(args []object.Object, _ *object.Environment) object.Object {
         for _, arg := range args {
             fmt.Printf("%s ", arg)
         }
         fmt.Println()
 
-        return Null
+        return object.Null
     },
-    Len: func(args []object.Object) object.Object {
+    Len: func(args []object.Object, _ *object.Environment) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Len)
         }
@@ -41,39 +52,39 @@ var builtins = map[string]object.Builtin{
             return createError(ArgumentTypesError, "%s(%s)", Len,  input.Type())
         }
     },
-    First: func(args []object.Object) object.Object {
+    First: func(args []object.Object, _ *object.Environment) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", First)
         }
 
         switch input := args[0].(type) {
         case *object.Array:
-            if len(input.Elements) == 0 { return Null }
+            if len(input.Elements) == 0 { return object.Null }
             return input.Elements[0]
         case object.String:
-            if len(input) == 0 { return Null }
+            if len(input) == 0 { return object.Null }
             return object.String(input[0])
         default:
             return createError(ArgumentTypesError, "%s(%s)", First,  input.Type())
         }
     },
-    Last: func(args []object.Object) object.Object {
+    Last: func(args []object.Object, _ *object.Environment) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Last)
         }
 
         switch input := args[0].(type) {
         case *object.Array:
-            if len(input.Elements) == 0 { return Null }
+            if len(input.Elements) == 0 { return object.Null }
             return input.Elements[len(input.Elements) - 1]
         case object.String:
-            if len(input) == 0 { return Null }
+            if len(input) == 0 { return object.Null }
             return object.String(input[len(input) - 1])
         default:
             return createError(ArgumentTypesError, "%s(%s)", Last,  input.Type())
         }
     },
-    Head: func(args []object.Object) object.Object {
+    Head: func(args []object.Object, _ *object.Environment) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Head)
         }
@@ -89,7 +100,7 @@ var builtins = map[string]object.Builtin{
             return createError(ArgumentTypesError, "%s(%s)", Head,  input.Type())
         }
     },
-    Tail: func(args []object.Object) object.Object {
+    Tail: func(args []object.Object, _ *object.Environment) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Tail)
         }
@@ -105,7 +116,7 @@ var builtins = map[string]object.Builtin{
             return createError(ArgumentTypesError, "%s(%s)", Tail, input.Type())
         }
     },
-    Push: func(args []object.Object) object.Object {
+    Push: func(args []object.Object, _ *object.Environment) object.Object {
         if len(args) != 2 {
             return createError(ArgumentMistmatchError, "%s", Push)
         }
@@ -140,7 +151,7 @@ var builtins = map[string]object.Builtin{
                 Push, col.Type(), args[1].Type())
         }
     },
-    Iter: func(args []object.Object) object.Object {
+    Iter: func(args []object.Object, _ *object.Environment) object.Object {
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Iter)
         }
@@ -150,7 +161,7 @@ var builtins = map[string]object.Builtin{
             idx := 0
 
             var f object.Builtin
-            f = func(args []object.Object) object.Object {
+            f = func(args []object.Object, _ *object.Environment) object.Object {
                 if idx >= len(col.Elements) {
                     return object.Tuple{
                         zero(col.ElementType),
@@ -170,7 +181,7 @@ var builtins = map[string]object.Builtin{
             idx := 0
 
             var f object.Builtin
-            f = func(args []object.Object) object.Object {
+            f = func(args []object.Object, _ *object.Environment) object.Object {
                 if idx >= len(col) {
                     return object.Tuple{
                         zero(object.StringType),
@@ -193,7 +204,57 @@ var builtins = map[string]object.Builtin{
                 Iter, col.Type())
         }
     },
-    Collect: func(args []object.Object) object.Object { // only creates arrays for now
+    Map: func(args []object.Object, env *object.Environment) object.Object {
+        if len(args) != 2 {
+            return createError(ArgumentMistmatchError, "%s", Map)
+        }
+
+        next, ok := args[0].(object.Builtin)
+        if !ok {
+            return createError(
+                ArgumentTypesError,
+                "%s(%s, %s)",
+                Map, args[0].Type(), args[1].Type())
+        }
+
+        adapt, ok := args[1].(*object.Function)
+        if !ok {
+            return createError(
+                ArgumentTypesError,
+                "%s(%s, %s)",
+                Map, args[0].Type(), args[1].Type())
+        }
+        if len(adapt.Parameters) != 1 {
+            return createError(
+                ArgumentTypesError,
+                "%s requires function with 1 parameter (got %d)",
+                Map, len(adapt.Parameters))
+        }
+        innerEnv := object.CreateEnclosedEnvironment(env)
+
+        var f object.Builtin
+        f = func(args []object.Object, _ *object.Environment) object.Object {
+            t := next([]object.Object{}, nil).(object.Tuple)
+            val := t[0]
+            ok = bool(t[1].(object.Boolean))
+
+            if !ok {
+                return object.Tuple{
+                    object.Default(val.Type()),
+                    object.Boolean(false),
+                }
+            }
+
+            innerEnv.Set(adapt.Parameters[0].Value, val)
+            return object.Tuple{
+                unwrapReturn(evalBlock(adapt.Body.Statements, innerEnv)),
+                object.Boolean(true),
+            }
+        }
+
+        return f
+    },
+    Collect: func(args []object.Object, _ *object.Environment) object.Object { // only creates arrays for now
         if len(args) != 1 {
             return createError(ArgumentMistmatchError, "%s", Collect)
         }
@@ -208,20 +269,25 @@ var builtins = map[string]object.Builtin{
             ElementType: object.NullType,
         }
 
-        t := next([]object.Object{}).(object.Tuple)
+        t := next([]object.Object{}, nil).(object.Tuple)
         val := t[0]
-        ok = bool(t[1].(object.Boolean))
+        if isError(val) { return val }
 
+        ok = bool(t[1].(object.Boolean))
         if !ok { return arr }
+
         arr.ElementType = val.Type()
         arr.Elements = append(arr.Elements, val)
 
         for {
-            t = next([]object.Object{}).(object.Tuple)
-            val = t[0]
-            ok = bool(t[1].(object.Boolean))
+            t = next([]object.Object{}, nil).(object.Tuple)
 
+            val = t[0]
+            if isError(val) { return val }
+
+            ok = bool(t[1].(object.Boolean))
             if !ok { return arr }
+
             arr.Elements = append(arr.Elements, val)
         }
     },
@@ -237,5 +303,5 @@ func zero(t object.ObjectType) object.Object {
         return object.Boolean(false)
     }
 
-    return Null
+    return object.Null
 }
