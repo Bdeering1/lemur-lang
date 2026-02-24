@@ -196,7 +196,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
     }
 
     if !p.expectRead(token.Assign) { return nil }
-    stmt.Values = p.parseExpressionList()
+    stmt.Value = p.parseExpression(Lowest)
 
     if p.curTokenIs(token.Semicolon) { p.readToken() }
     return stmt

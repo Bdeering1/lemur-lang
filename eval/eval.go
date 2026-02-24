@@ -16,7 +16,7 @@ const (
     InvalidConditionError       = "invalid condition"
     InvalidCastError            = "invalid type cast"
     InvalidIndexExpressionError = "invalid index expression"
-    NotEnoughValuesError           = "not enough values in assignment"
+    NotEnoughValuesError        = "not enough values in assignment"
     NotYetImplementedError      = "not yet implemented"
     TypeMismatchError           = "type mismatch"
     UnknownOperatorError        = "unknown operator"
@@ -40,11 +40,16 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
         return evalBlock(node.Statements, innerEnv)
 
     case *ast.LetStatement:
-        obj := Eval(node.Values, env)
+        obj := Eval(node.Value, env)
         if isError(obj) { return obj }
 
-        values := obj.(object.Tuple)
-        if len(values) != len(node.Names) {
+        var values object.Tuple
+        values, ok := obj.(object.Tuple)
+        if !ok {
+            values = object.Tuple{ obj }
+        }
+
+        if len(values) < len(node.Names) {
             return createError(
                 NotEnoughValuesError,
                 "expected %d values (got %d)",

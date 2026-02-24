@@ -23,6 +23,8 @@ func TestLetStatement(t *testing.T) {
         {"let a, b = 1 + 1, 2 * 2; a, b", []int{2, 4}},
         {"let a, b = true && false, true || false; a, b", []bool{false, true}},
         {"let a, b, c = fn(){1}(), [2][0], {3: 3}[3]; a, b, c", []int{1, 2, 3}},
+        {"let a, b = fn(){ 1, 2 }()", []int{1, 2}},
+        {"let a, b = fn(){ return 1, 2 }()", []int{1, 2}},
     }
 
     for i, tst := range tests {
