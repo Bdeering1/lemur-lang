@@ -43,6 +43,8 @@ const (
     And
     Or
 
+    Pipe
+
     // Keywords
     Function
     Let
@@ -66,6 +68,7 @@ var Operators = map[string]TokenType{
     "!=": NotEq,
     "&&": And,
     "||": Or,
+    "|>": Pipe,
 }
 
 var Keywords = map[string]TokenType{ // can this be a bi-directional map?

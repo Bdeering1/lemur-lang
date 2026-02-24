@@ -284,6 +284,52 @@ func TestCallExpression(t *testing.T) {
     testInfixExpression(t, exp.Arguments[2], 4, "+", 5)
 }
 
+type CallExp struct { Name string; Arguments []any }
+
+func TestPipeOperator(t *testing.T) {
+    tests := []struct{
+        input     string
+        expdIdent string
+        expdArgs  any
+    }{
+        {"1 |> f", "f", []any{ 1 }},
+        {"true |> f", "f", []any{ true }},
+        {"a |> f", "f", []any{ "a" }},
+        {"a, b |> f", "f", []any{ "a", "b" }},
+        {"1 |> f1 |> f2", "f2", CallExp{ Name: "f1", Arguments: []any{ 1 } } },
+    }
+
+    for _, tst := range tests {
+        parser, program := runNewParser(t, tst.input)
+        failOnError(t, parser)
+
+        stmt := assertCast[*ast.ExpressionStatement](t, program[0])
+        exp := assertCast[*ast.CallExpression](t, stmt.Value)
+        testIdentifier(t, exp.Function, tst.expdIdent)
+
+        switch expd := tst.expdArgs.(type) {
+        case []string:
+        case []int:
+        case []bool:
+            assertMsg(t, len(exp.Arguments), len(expd),
+                "wrong number of arguments in call expression")
+            for i, expdArg := range expd {
+                testLiteralExpression(t, exp.Arguments[i], expdArg)
+            }
+        case CallExp:
+            nestedCall := assertCast[*ast.CallExpression](t, exp.Arguments[0])
+            testIdentifier(t, nestedCall.Function, expd.Name)
+
+            assertMsg(
+                t, len(exp.Arguments), len(expd.Arguments),
+                "wrong number of arguments in nested call expression")
+            for i, a := range expd.Arguments {
+                testLiteralExpression(t, nestedCall.Arguments[i], a)
+            }
+        }
+    }
+}
+
 func TestIdentifier(t *testing.T) {
     input := "foobar;"
 

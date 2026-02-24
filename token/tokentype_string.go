@@ -34,18 +34,19 @@ func _() {
 	_ = x[NotEq-23]
 	_ = x[And-24]
 	_ = x[Or-25]
-	_ = x[Function-26]
-	_ = x[Let-27]
-	_ = x[True-28]
-	_ = x[False-29]
-	_ = x[If-30]
-	_ = x[Else-31]
-	_ = x[Return-32]
+	_ = x[Pipe-26]
+	_ = x[Function-27]
+	_ = x[Let-28]
+	_ = x[True-29]
+	_ = x[False-30]
+	_ = x[If-31]
+	_ = x[Else-32]
+	_ = x[Return-33]
 }
 
-const _TokenType_name = "IllegalEOFIdentStringIntCommaColonSemicolonLParenRParenLBraceRBraceLBracketRBracketAssignPlusMinusBangAsteriskSlashLTGTEqNotEqAndOrFunctionLetTrueFalseIfElseReturn"
+const _TokenType_name = "IllegalEOFIdentStringIntCommaColonSemicolonLParenRParenLBraceRBraceLBracketRBracketAssignPlusMinusBangAsteriskSlashLTGTEqNotEqAndOrPipeFunctionLetTrueFalseIfElseReturn"
 
-var _TokenType_index = [...]uint8{0, 7, 10, 15, 21, 24, 29, 34, 43, 49, 55, 61, 67, 75, 83, 89, 93, 98, 102, 110, 115, 117, 119, 121, 126, 129, 131, 139, 142, 146, 151, 153, 157, 163}
+var _TokenType_index = [...]uint8{0, 7, 10, 15, 21, 24, 29, 34, 43, 49, 55, 61, 67, 75, 83, 89, 93, 98, 102, 110, 115, 117, 119, 121, 126, 129, 131, 135, 143, 146, 150, 155, 157, 161, 167}
 
 func (i TokenType) String() string {
 	idx := int(i) - 0

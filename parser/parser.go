@@ -2,7 +2,6 @@ package parser
 
 import (
     "fmt"
-    "slices"
     "strconv"
 
     "lemur/ast"
@@ -15,13 +14,17 @@ const (
     IllegalTokenError              = "illegal token"
     NonIdentifierAssignmentError   = "non-identifier expression after let keyword"
     NonIdentifierParameterError    = "non-identifier expression in function parameters"
+    NonKeyValueMapElement          = "non key-value pair element in map"
+    NotYetImplementedError         = "not yet implemented"
     DuplicateIdentifierAssignError = "duplicate identifier in variable assignment"
 )
 
 const (
     _ int = iota
     Lowest
+    Pipe
     Tuple
+    KeyValue
     AndOr
     Equals
     LessGreater
@@ -33,6 +36,9 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
+    token.Pipe:     Pipe,
+    token.Comma:    Tuple,
+    token.Colon:    KeyValue,
     token.And:      AndOr,
     token.Or:       AndOr,
     token.Eq:       Equals,
@@ -93,16 +99,19 @@ func New(l *lexer.Lexer) *Parser {
     p.registerPrefix(token.Function, p.parseFunctionLiteral)
 
     p.infixParseFns = make(map[token.TokenType]infixParseFn)
+    p.registerInfix(token.Pipe, p.parsePipeExpression)
+    p.registerInfix(token.Comma, p.parseTuple)
+    p.registerInfix(token.Colon, p.parseKeyValueExpression)
+    p.registerInfix(token.And, p.parseInfixExpression)
+    p.registerInfix(token.Or, p.parseInfixExpression)
+    p.registerInfix(token.Eq, p.parseInfixExpression)
+    p.registerInfix(token.NotEq, p.parseInfixExpression)
+    p.registerInfix(token.LT, p.parseInfixExpression)
+    p.registerInfix(token.GT, p.parseInfixExpression)
     p.registerInfix(token.Plus, p.parseInfixExpression)
     p.registerInfix(token.Minus, p.parseInfixExpression)
     p.registerInfix(token.Slash, p.parseInfixExpression)
     p.registerInfix(token.Asterisk, p.parseInfixExpression)
-    p.registerInfix(token.Eq, p.parseInfixExpression)
-    p.registerInfix(token.NotEq, p.parseInfixExpression)
-    p.registerInfix(token.And, p.parseInfixExpression)
-    p.registerInfix(token.Or, p.parseInfixExpression)
-    p.registerInfix(token.LT, p.parseInfixExpression)
-    p.registerInfix(token.GT, p.parseInfixExpression)
     p.registerInfix(token.LParen, p.parseCallExpression)
     p.registerInfix(token.LBracket, p.parseIndexExpression)
 
@@ -168,26 +177,28 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
     }
     p.readToken()
 
-    stmt.Names = p.parseIdentifiers()
-    if stmt.Names == nil {
-        p.raiseError(NonIdentifierAssignmentError)
-        return nil
-    }
-
-    seen := make(map[string]struct{}, len(stmt.Names))
-    for _, n := range stmt.Names {
-        if _, exists := seen[n.Value]; exists {
-            p.raiseError(fmt.Sprintf("%s: %s", DuplicateIdentifierAssignError, n.Value))
+    exps := p.parseExpressionList()
+    seen := make(map[string]struct{}, len(exps))
+    for _, e := range exps {
+        i, ok := e.(*ast.Identifier)
+        if !ok {
+            p.raiseError(NonIdentifierAssignmentError)
             return nil
         }
-        seen[n.Value] = struct{}{}
+
+        if _, exists := seen[i.Value]; exists {
+            p.raiseError(fmt.Sprintf("%s: %s", DuplicateIdentifierAssignError, i.Value))
+            return nil
+        }
+        seen[i.Value] = struct{}{}
+
+        stmt.Names = append(stmt.Names, i)
     }
 
     if !p.expectRead(token.Assign) { return nil }
-    stmt.Values = slices.Collect(p.parseExpressions)
+    stmt.Values = p.parseExpressionList()
 
     if p.curTokenIs(token.Semicolon) { p.readToken() }
-
     return stmt
 }
 
@@ -195,7 +206,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
     stmt := &ast.ReturnStatement{Token: p.curToken}
     p.readToken()
 
-    stmt.Value = p.parseExpressionOrTuple()
+    stmt.Value = p.parseExpression(Lowest)
     if p.curTokenIs(token.Semicolon) { p.readToken() }
 
     return stmt
@@ -204,7 +215,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
     stmt := &ast.ExpressionStatement{Token: p.curToken}
 
-    stmt.Value = p.parseExpressionOrTuple()
+    stmt.Value = p.parseExpression(Lowest)
     if p.curTokenIs(token.Semicolon) { p.readToken() }
 
     return stmt
@@ -271,16 +282,32 @@ func (p *Parser) parseIdentifier() ast.Expression {
 func (p *Parser) parseHashLiteral() ast.Expression {
     h := &ast.HashLiteral{
         Token: p.curToken,
-        Pairs: []ast.KVPair{},
+        Pairs: []*ast.KeyValue{},
     }
     p.readToken()
 
     if p.skipToken(token.RBrace) { return h }
-    h.Pairs = slices.Collect(p.parseExpressionPairs)
+    exps := p.parseExpressionList()
+    for _, e := range exps {
+        kv, ok := e.(*ast.KeyValue)
+        if !ok {
+            p.raiseError(NonKeyValueMapElement)
+            return nil
+        }
+
+        h.Pairs = append(h.Pairs, kv)
+    }
 
     if !p.expectRead(token.RBrace) { return nil }
 
     return h
+}
+
+func (p *Parser) parseKeyValueExpression(key ast.Expression) ast.Expression {
+    p.readToken()
+
+    value := p.parseExpression(KeyValue)
+    return &ast.KeyValue{Key: key, Value: value}
 }
 
 func (p *Parser) parseArrayLiteral() ast.Expression  {
@@ -291,7 +318,7 @@ func (p *Parser) parseArrayLiteral() ast.Expression  {
     p.readToken()
 
     if p.skipToken(token.RBracket) { return arr }
-    arr.Elements = slices.Collect(p.parseExpressions)
+    arr.Elements = p.parseExpressionList()
 
     if !p.expectRead(token.RBracket) { return nil }
     return arr
@@ -337,15 +364,20 @@ func (p *Parser) parseBoolean() ast.Expression {
 }
 
 func (p *Parser) parseFunctionLiteral() ast.Expression {
-    l := &ast.FunctionLiteral{Token: p.curToken, Parameters: []*ast.Identifier{}}
+    l := &ast.FunctionLiteral{Token: p.curToken}
     p.readToken()
 
     if !p.expectRead(token.LParen) { return nil }
     if !p.skipToken(token.RParen) {
-        l.Parameters = p.parseIdentifiers()
-        if l.Parameters == nil {
-            p.raiseError(NonIdentifierParameterError)
-            return nil
+        exps := p.parseExpressionList()
+        for _, e := range exps {
+            i, ok := e.(*ast.Identifier)
+            if !ok {
+                p.raiseError(NonIdentifierParameterError)
+                return nil
+            }
+
+            l.Parameters = append(l.Parameters, i)
         }
 
         if !p.expectRead(token.RParen) { return nil }
@@ -366,9 +398,25 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
     p.readToken()
 
     if p.skipToken(token.RParen) { return exp }
-    exp.Arguments = slices.Collect(p.parseExpressions)
+    exp.Arguments = p.parseExpressionList()
 
     if !p.expectRead(token.RParen) { return nil }
+    return exp
+}
+
+func (p *Parser) parsePipeExpression(left ast.Expression) ast.Expression {
+    p.readToken()
+    exp := &ast.CallExpression{Token: p.curToken}
+
+    exp.Function = p.parseExpression(Pipe)
+
+    t, ok := left.(ast.TupleExpression)
+    if !ok {
+        exp.Arguments = []ast.Expression{ left }
+        return exp
+    }
+
+    exp.Arguments = []ast.Expression(t)
     return exp
 }
 
@@ -407,64 +455,27 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
     return exp
 }
 
+func (p *Parser) parseTuple(left ast.Expression) ast.Expression {
+    p.readToken()
 
-func (p *Parser) parseIdentifiers() []*ast.Identifier {
-    if !p.curTokenIs(token.Ident) { return nil }
-    idents := []*ast.Identifier{}
-
-    i := p.parseIdentifier().(*ast.Identifier)
-    idents = append(idents, i)
-
-    for p.curTokenIs(token.Comma) {
-        p.readToken()
-        if !p.curTokenIs(token.Ident) { break }
-
-        i := p.parseIdentifier().(*ast.Identifier)
-        idents = append(idents, i)
+    right := p.parseExpression(Tuple)
+    if t, ok := left.(ast.TupleExpression); ok {
+        return append(t, right)
     }
 
-    return idents
+    return ast.TupleExpression([]ast.Expression{ left, right })
 }
 
-func (p *Parser) parseExpressionOrTuple() ast.Expression {
-    e := p.parseExpression(Lowest)
-    if !p.skipToken(token.Comma) { return e }
 
-    exps := slices.Collect(p.parseExpressions)
+func (p *Parser) parseExpressionList() []ast.Expression {
+    exp := p.parseExpression(Lowest)
 
-    return ast.TupleExpression(append([]ast.Expression{e}, exps...))
-}
-
-func (p *Parser) parseExpressions(yield func(ast.Expression) bool) {
-    if !yield(p.parseExpression(Lowest)) { return }
-
-    for p.curTokenIs(token.Comma) {
-        p.readToken()
-        if !yield(p.parseExpression(Lowest)) { return }
+    if t, ok := exp.(ast.TupleExpression); ok {
+        return []ast.Expression(t)
     }
+
+    return []ast.Expression{ exp }
 }
-
-func (p *Parser) parseExpressionPairs(yield func(ast.KVPair) bool) {
-    k := p.parseExpression(Lowest)
-    if k == nil || !p.skipToken(token.Colon ) { return }
-
-    v := p.parseExpression(Lowest)
-    if v == nil { return }
-
-    if !yield(ast.KVPair{Key: k, Value: v}) { return }
-
-    for p.curTokenIs(token.Comma) {
-        p.readToken()
-        k := p.parseExpression(Lowest)
-        if k == nil || !p.skipToken(token.Colon ) { return }
-
-        v := p.parseExpression(Lowest)
-        if v == nil { return }
-
-        if !yield(ast.KVPair{Key: k, Value: v}) { return }
-    }
-}
-
 
 func (p *Parser) readToken() { p.curToken = p.lex.NextToken() }
 func (p *Parser) curTokenIs(tt token.TokenType) bool { return p.curToken.Type == tt }
