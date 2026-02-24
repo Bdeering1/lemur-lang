@@ -65,7 +65,8 @@ func StartREPL(in io.Reader) {
         } else if mode == Stringify {
             parse(res, true)
         } else {
-            runEval(res, env)
+            res := runEval(res, env)
+            fmt.Println(res)
         }
     }
 }

@@ -185,6 +185,7 @@ func TestBuiltinCollect(t *testing.T) {
         {"let n = iter([]); collect(n)", []int{}},
         {"let n = iter([1, 2, 3]); collect(n)", []int{1, 2, 3}},
         {`let n = iter(["one", "two", "three"]); collect(n)`, []string{"one", "two", "three"}},
+        {"iter([1, 2, 3]), fn(x){ x * 2 } |> map |> collect", []int{2, 4, 6}},
         // {`iter("")`, ""},
         // {`iter("abc")`, "abc"},
     }

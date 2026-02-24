@@ -18,19 +18,23 @@ func EvalFromReader(in io.Reader) {
 
     input := string(b)
     env := object.CreateEnvironment()
-    runEval(input, env)
+    res := runEval(input, env)
+    fmt.Println(res)
 }
 
 func EvalFromFile(fname string) {
     b, err := os.ReadFile(fname)
-    if err != nil || len(b) == 0 { return }
+    if err != nil {
+        fmt.Printf("Unable to evaluate: %s (%s)\n", fname, err)
+        return
+    }
 
     input := string(b)
     env := object.CreateEnvironment()
     runEval(input, env)
 }
 
-func runEval(input string, env *object.Environment) {
+func runEval(input string, env *object.Environment) string {
     input = input + "\x00"
     l := lexer.New(input)
     p := parser.New(l)
@@ -38,11 +42,11 @@ func runEval(input string, env *object.Environment) {
     program := p.ParseProgram()
     if len(p.Errors()) != 0  {
         printParserErrors(p.Errors())
-        return
+        return ""
     }
 
     evaluated := eval.Eval(program, env)
-    fmt.Println(evaluated)
+    return evaluated.String()
 }
 
 func lex(input string) {

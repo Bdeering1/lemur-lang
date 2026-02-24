@@ -37,21 +37,19 @@ func (l *Lexer) NextToken() (tok token.Token) {
     case '+': tok.Type = token.Plus
     case '-': tok.Type = token.Minus
     case '*': tok.Type = token.Asterisk
-    case '/':
-        if l.nextChar() == '/' {
-            for l.ch != '\n' {
-                if l.ch == '\x00' {
-                    tok.Type = token.EOF
-                    return
-                }
-                l.readChar()
-            }
-
-            return l.NextToken()
-        }
-        tok.Type = token.Slash
+    case '/': tok.Type = token.Slash
     case '>': tok.Type = token.GT
     case '<': tok.Type = token.LT
+    case '#':
+        for l.ch != '\n' {
+            if l.ch == '\x00' {
+                tok.Type = token.EOF
+                return
+            }
+            l.readChar()
+        }
+
+        return l.NextToken()
     case '=', '!', '&', '|':
         l.readOperator(&tok)
     case '"':

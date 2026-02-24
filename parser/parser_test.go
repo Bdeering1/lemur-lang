@@ -33,7 +33,7 @@ func TestLetStatement(t *testing.T) {
             assertToken(t, ls.Token.Literal, "let")
 
             testIdentifier(t, ls.Names[0], tst.expdIdents[0])
-            testLiteralExpression(t, ls.Values[0], expdVal)
+            testLiteralExpression(t, ls.Value, expdVal)
 
         case []string:
         case []int:
@@ -44,7 +44,7 @@ func TestLetStatement(t *testing.T) {
             ls := assertCast[*ast.LetStatement](t, program[0])
             assertToken(t, ls.Token.Literal, "let")
 
-            exps := assertCast[ast.TupleExpression](t, ls.Values)
+            exps := assertCast[ast.TupleExpression](t, ls.Value)
             assert(t, len(exps), len(expdVal))
             for i, n := range ls.Names {
                 testIdentifier(t, n, (tst.expdIdents)[i])
