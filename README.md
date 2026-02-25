@@ -5,29 +5,25 @@ Lemur is an experimental language inspired by Thorsten Ball's [Writing an Interp
 The language currently supports the following features:
 - string, integer, boolean, array, and hash map types
 - basic logical and arithmentic operations
-- variable assignment with implicit typing
+- assignment with implicit typing, multiple assignment and tuple expressions
 - if/else expressions
 - first class functions with implicit or explicit returns
-- builtin functions for arrays and strings
-  - puts, len, first, last, head, tail, push
+- pipeline expressions
+- builtin functions
+  - puts, len, first, last, head, tail, push, iter, map, collect
 - EOL comments
 - interactive REPL with code evaluation + optional lexer and parser output
 
 Syntax sample:
-```rust
-let map = fn(col, f) {
-    let iter = fn(col, res) {
-        if len(col) == 0 {
-            return res
-        }
-        iter(tail(col), push(res, f(first(col)))
-    }
-
-    iter(col, [])
+```ruby
+let double = fn(col) {
+    iter(col), fn(x){ x * 2 }
+    |> map
+    |> collect
 }
 
 let arr = [1, 2, 3]
-map(arr, fn(x){ x * 2 }) // [2, 4, 6]
+puts(double(arr)) # [2, 4, 6]
 ```
 
 ## Usage
