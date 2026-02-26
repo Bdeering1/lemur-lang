@@ -18,6 +18,7 @@ func (b B) Builtins() map[string]object.Builtin {
 
 const (
     Puts    = "puts"
+    TypeOf  = "typeof"
     Len     = "len"
     First   = "first"
     Last    = "last"
@@ -37,6 +38,13 @@ var fns = map[string]object.Builtin{
         fmt.Println()
 
         return object.Null
+    },
+    TypeOf: func(args []object.Object, _ *object.Environment) object.Object {
+        if len(args) != 1 {
+            return createError(ArgumentMistmatchError, "%s", TypeOf)
+        }
+
+        return object.ObjectType(args[0].Type())
     },
     Len: func(args []object.Object, _ *object.Environment) object.Object {
         if len(args) != 1 {

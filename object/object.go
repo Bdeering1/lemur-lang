@@ -1,3 +1,4 @@
+//go:generate stringer -type=ObjectType --linecomment
 package object
 
 import (
@@ -13,24 +14,24 @@ type Object interface {
     String() string
 }
 
-type ObjectType string // this can be a numeric enum
+type ObjectType int
 
 const (
-    TupleType	 = "Tuple"
-    BuiltinType  = "Builtin"
-    FunctionType = "Function"
-    HashMapType	 = "HashMap"
-    ArrayType	 = "Array"
-    StringType	 = "String"
-    IntegerType  = "Integer"
-    BooleanType  = "Boolean"
-    ReturnType   = "Return"
-    ErrorType    = "Error"
-    NullType     = ""
+    Type ObjectType = iota
+    TupleType	 // Tuple
+    BuiltinType  // Builtin
+    FunctionType // Function
+    HashMapType  // HashMap
+    ArrayType	 // Array
+    StringType	 // String
+    IntegerType  // Integer
+    BooleanType	 // Boolean
+    ReturnType	 // Return
+    ErrorType	 // Error
+    NullType	 // Null
 )
-
-type ValueObject interface { _valueObject() }
-
+var _ Object = (ObjectType)(0)
+func (ot ObjectType) Type() ObjectType { return Type }
 
 func Default(t ObjectType) Object {
     switch t {
@@ -46,6 +47,8 @@ func Default(t ObjectType) Object {
 	return NullObject(false)
     }
 }
+
+type ValueObject interface { _valueObject() }
 
 
 type Tuple []Object
