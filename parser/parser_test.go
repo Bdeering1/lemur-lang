@@ -9,27 +9,28 @@ import (
 )
 
 type Error string
+type Ident string
 
 func TestLetStatement(t *testing.T) {
     tests := []struct {
         input      string
-        expdIdents []string
+        expdIdents []Ident
         expdValue  any
     }{
-        {"let x = 5", []string{"x"}, 5},
-        {"let y = true", []string{"y"}, true},
-        {"let foobar = y", []string{"foobar"}, "y"},
-        {"let a, b = 1, 2", []string{}, []int{1, 2}},
-        {"let a, b = true, false", []string{}, []int{1, 2}},
-        {`let a, b, c = "a", "b", "c"`, []string{}, []string{"a", "b", "c"}},
-        {"let a, a = 1, 2", []string{}, Error(DuplicateIdentifierAssignError + ": a")},
-        {"let a, b, b = 1, 2, 3", []string{}, Error(DuplicateIdentifierAssignError + ": b")},
-        {"let 1 = 2", []string{}, Error(NonIdentifierAssignmentError)},
+        {"let x = 5", []Ident{"x"}, 5},
+        {"let y = true", []Ident{"y"}, true},
+        {"let foobar = y", []Ident{"foobar"}, Ident("y")},
+        {"let a, b = 1, 2", []Ident{}, []int{1, 2}},
+        {"let a, b = true, false", []Ident{}, []int{1, 2}},
+        {`let a, b, c = "a", "b", "c"`, []Ident{}, []string{"a", "b", "c"}},
+        {"let a, a = 1, 2", []Ident{}, Error(DuplicateIdentifierAssignError + ": a")},
+        {"let a, b, b = 1, 2, 3", []Ident{}, Error(DuplicateIdentifierAssignError + ": b")},
+        {"let 1 = 2", []Ident{}, Error(NonIdentifierAssignmentError)},
     }
 
     for _, tst := range tests {
         switch expdVal := tst.expdValue.(type) {
-        case string, int, bool:
+        case string, int, bool, Ident:
             parser, program := runNewParser(t, tst.input)
             failOnError(t, parser)
 
@@ -72,7 +73,7 @@ func TestReturnStatement(t *testing.T) {
     }{
         {"return 5", 5},
         {"return true", true},
-        {"return y", "y"},
+        {"return y", Ident("y")},
     }
 
     for _, tst := range tests {
@@ -214,7 +215,7 @@ func TestIfExpression(t *testing.T) {
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
     exp := assertCast[*ast.ConditionalExpression](t, stmt.Value)
-    testInfixExpression(t, exp.Condition, "x", "<", "y")
+    testInfixExpression(t, exp.Condition, Ident("x"), "<", Ident("y"))
 
     assertMsg(t, len(exp.Consequence.Statements), 1, "wrong number of statements in consequence block")
     es := assertCast[*ast.ExpressionStatement](t, exp.Consequence.Statements[0])
@@ -231,7 +232,7 @@ func TestIfElseExpression(t *testing.T) {
 
     stmt := assertCast[*ast.ExpressionStatement](t, program[0])
     exp := assertCast[*ast.ConditionalExpression](t, stmt.Value)
-    testInfixExpression(t, exp.Condition, "x", "<", "y")
+    testInfixExpression(t, exp.Condition, Ident("x"), "<", Ident("y"))
 
     assertMsg(t, len(exp.Consequence.Statements), 1, "wrong number of statements in consequence block")
     csq := assertCast[*ast.ExpressionStatement](t, exp.Consequence.Statements[0])
@@ -248,15 +249,15 @@ func TestFunctionLiteral(t *testing.T) {
         expdStmts  int
         expdParams any
     }{
-        {"fn(){ x + y }", 1, []string{}},
-        {"fn(x){}", 0, []string{"x"}},
-        {"fn(x, y, z){}", 0, []string{"x", "y", "z"}},
+        {"fn(){ x + y }", 1, []Ident{}},
+        {"fn(x){}", 0, []Ident{"x"}},
+        {"fn(x, y, z){}", 0, []Ident{"x", "y", "z"}},
         {"fn(1 + 1){}", 0, Error(NonIdentifierParameterError)},
     }
 
     for _, tst := range tests {
         switch expdParams := tst.expdParams.(type) {
-        case []string:
+        case []Ident:
             parser, program := runNewParser(t, tst.input)
             failOnError(t, parser)
             stmt := assertCast[*ast.ExpressionStatement](t, program[0])
@@ -287,12 +288,12 @@ func TestCallExpression(t *testing.T) {
     testInfixExpression(t, exp.Arguments[2], 4, "+", 5)
 }
 
-type CallExp struct { Name string; Arguments []any }
+type CallExp struct { Name Ident; Arguments []any }
 
 func TestPipeOperator(t *testing.T) {
     tests := []struct{
         input     string
-        expdIdent string
+        expdIdent Ident
         expdArgs  any
     }{
         {"1 |> f", "f", []any{ 1 }},
@@ -501,7 +502,7 @@ func testInfixExpression(t *testing.T, exp ast.Expression, left any, op string, 
     testLiteralExpression(t, ie.Right, right)
 }
 
-func testFunctionLiteral(t *testing.T, exp ast.Expression, stmts int, params []string) {
+func testFunctionLiteral(t *testing.T, exp ast.Expression, stmts int, params []Ident) {
     f := assertCast[*ast.FunctionLiteral](t, exp)
 
     assertMsg(t, len(f.Parameters), len(params), "wrong number of parameters in function literal")
@@ -512,7 +513,7 @@ func testFunctionLiteral(t *testing.T, exp ast.Expression, stmts int, params []s
     assertMsg(t, len(f.Body.Statements), stmts, "wrong number of statements in function body")
 }
 
-func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) { // modify to allow for strings ?
+func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) {
     switch v := expected.(type) {
     case int:
         testIntegerLiteral(t, exp, int64(v))
@@ -524,6 +525,9 @@ func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) { // 
         testBooleanLiteral(t, exp, v)
         return
     case string:
+        testStringLiteral(t, exp, v)
+        return
+    case Ident:
         testIdentifier(t, exp, v)
         return
     }
@@ -531,11 +535,11 @@ func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) { // 
     t.Errorf("expression type not handled for (got %T)", exp)
 }
 
-func testIdentifier(t *testing.T, exp ast.Expression, val string) {
+func testIdentifier(t *testing.T, exp ast.Expression, val Ident) {
     i := assertCast[*ast.Identifier](t, exp)
 
-    assert(t, i.Value, val)
-    assertToken(t, i.Token.Literal, val)
+    assert(t, i.Value, string(val))
+    assertToken(t, i.Token.Literal, string(val))
 }
 
 func testStringLiteral(t *testing.T, sl ast.Expression, val string) {
@@ -597,7 +601,7 @@ func assert(t *testing.T, val, expected any) {
     }
 }
 
-func assertToken(t *testing.T, val, expected any) {
+func assertToken(t *testing.T, val, expected string) {
     if val != expected {
         t.Errorf("incorrect token literal, expected %v (got %v)", expected, val)
     }
@@ -614,7 +618,7 @@ func assertMsg(t *testing.T, val, expected any, msg string) {
 func assertCast[T ast.Node](t *testing.T, node ast.Node) T {
     n, ok := node.(T)
     if !ok {
-        t.Fatalf("node is not an %T (got %T)", *new(T), node)
+        t.Fatalf("node: %+v is not an %T (got %T)", node, *new(T), node)
     }
 
     return n
