@@ -8,6 +8,8 @@ import (
 	"lemur/lexer"
 )
 
+type Error string
+
 func TestLetStatement(t *testing.T) {
     tests := []struct {
         input      string
@@ -17,10 +19,12 @@ func TestLetStatement(t *testing.T) {
         {"let x = 5", []string{"x"}, 5},
         {"let y = true", []string{"y"}, true},
         {"let foobar = y", []string{"foobar"}, "y"},
-        {"let 1 = 2", []string{}, nil},
         {"let a, b = 1, 2", []string{}, []int{1, 2}},
         {"let a, b = true, false", []string{}, []int{1, 2}},
         {`let a, b, c = "a", "b", "c"`, []string{}, []string{"a", "b", "c"}},
+        {"let a, a = 1, 2", []string{}, Error(DuplicateIdentifierAssignError + ": a")},
+        {"let a, b, b = 1, 2, 3", []string{}, Error(DuplicateIdentifierAssignError + ": b")},
+        {"let 1 = 2", []string{}, Error(NonIdentifierAssignmentError)},
     }
 
     for _, tst := range tests {
@@ -51,9 +55,12 @@ func TestLetStatement(t *testing.T) {
                 testLiteralExpression(t, exps[i], expdVal[i])
             }
 
-        case nil:
-            parser, _ := runNewParser(t, tst.input)
-            assertError(t, parser, NonIdentifierAssignmentError)
+        case Error:
+            parser, _:= runNewParser(t, tst.input)
+            assertError(t, parser, expdVal)
+
+        default:
+            t.Fatalf("Unhandled test case for type %T", expdVal)
         }
     }
 }
@@ -236,35 +243,31 @@ func TestIfElseExpression(t *testing.T) {
 }
 
 func TestFunctionLiteral(t *testing.T) {
-    input := "fn(x, y) { x + y; }"
-
-    parser, program := runNewParser(t, input)
-    failOnError(t, parser)
-
-    stmt := assertCast[*ast.ExpressionStatement](t, program[0])
-    testFunctionLiteral(t, stmt.Value, 1, []string{"x", "y"})
-
-    f, _ := stmt.Value.(*ast.FunctionLiteral)
-    es := assertCast[*ast.ExpressionStatement](t, f.Body.Statements[0])
-    testInfixExpression(t, es.Value, "x", "+", "y")
-}
-
-func TestFunctionLiteralParameters(t *testing.T) {
     tests := []struct{
         input      string
-        expected []string
+        expdStmts  int
+        expdParams any
     }{
-        {input: "fn(){}", expected: []string{}},
-        {input: "fn(x){}", expected: []string{"x"}},
-        {input: "fn(x, y, z){}", expected: []string{"x", "y", "z"}},
+        {"fn(){ x + y }", 1, []string{}},
+        {"fn(x){}", 0, []string{"x"}},
+        {"fn(x, y, z){}", 0, []string{"x", "y", "z"}},
+        {"fn(1 + 1){}", 0, Error(NonIdentifierParameterError)},
     }
 
     for _, tst := range tests {
-        parser, program := runNewParser(t, tst.input)
-        failOnError(t, parser)
-        stmt := assertCast[*ast.ExpressionStatement](t, program[0])
+        switch expdParams := tst.expdParams.(type) {
+        case []string:
+            parser, program := runNewParser(t, tst.input)
+            failOnError(t, parser)
+            stmt := assertCast[*ast.ExpressionStatement](t, program[0])
 
-        testFunctionLiteral(t, stmt.Value, 0, tst.expected)
+            testFunctionLiteral(t, stmt.Value, tst.expdStmts, expdParams)
+        case Error:
+            parser, _ := runNewParser(t, tst.input)
+            assertError(t, parser, expdParams)
+        default:
+            t.Fatalf("Unhandled test case for type %T", expdParams)
+        }
     }
 }
 
@@ -296,7 +299,7 @@ func TestPipeOperator(t *testing.T) {
         {"true |> f", "f", []any{ true }},
         {"a |> f", "f", []any{ "a" }},
         {"a, b |> f", "f", []any{ "a", "b" }},
-        {"1 |> f1 |> f2", "f2", CallExp{ Name: "f1", Arguments: []any{ 1 } } },
+        {"1 |> f1 |> f2", "f2", CallExp{ Name: "f1", Arguments: []any{ 1 } }},
     }
 
     for _, tst := range tests {
@@ -345,7 +348,7 @@ type KVPair struct {K any; V any}
 func TestHashLiteral(t *testing.T) {
     tests := []struct{
         input    string
-        expected []KVPair
+        expected any
     }{
         {
             "{}",
@@ -359,34 +362,51 @@ func TestHashLiteral(t *testing.T) {
             `{"one": 1, "two": 2}`,
             []KVPair{ {"one", 1}, {"two", 2} },
         },
+        {`{a}`, Error(NonKeyValueMapElement)},
+        {`{"asdf"}`, Error(NonKeyValueMapElement)},
+        {`{10}`, Error(NonKeyValueMapElement)},
+        {`{true}`, Error(NonKeyValueMapElement)},
+        {`{[]}`, Error(NonKeyValueMapElement)},
+        {`{{}}`, Error(NonKeyValueMapElement)},
+        {`{"a": true, false}`, Error(NonKeyValueMapElement)},
     }
 
     for _, tst := range tests {
-        parser, program := runNewParser(t, tst.input)
-        failOnError(t, parser)
+        switch expdRes := tst.expected.(type) {
+        case []KVPair:
+            parser, program := runNewParser(t, tst.input)
+            failOnError(t, parser)
 
-        stmt := assertCast[*ast.ExpressionStatement](t, program[0])
-        hl := assertCast[*ast.HashLiteral](t, stmt.Value)
+            stmt := assertCast[*ast.ExpressionStatement](t, program[0])
+            hl := assertCast[*ast.HashLiteral](t, stmt.Value)
 
-        assert(t, len(hl.Pairs), len(tst.expected))
-        for i, p := range hl.Pairs {
-            switch expdKey := tst.expected[i].K.(type) {
-            case int:
-                testIntegerLiteral(t, p.Key, int64(expdKey))
-            case bool:
-                testBooleanLiteral(t, p.Key, expdKey)
-            case string:
-                testStringLiteral(t, p.Key, expdKey)
+            assert(t, len(hl.Pairs), len(expdRes))
+            for i, p := range hl.Pairs {
+                switch expdKey := expdRes[i].K.(type) {
+                case int:
+                    testIntegerLiteral(t, p.Key, int64(expdKey))
+                case bool:
+                    testBooleanLiteral(t, p.Key, expdKey)
+                case string:
+                    testStringLiteral(t, p.Key, expdKey)
+                }
+
+                switch expdVal := expdRes[i].V.(type) {
+                case int:
+                    testIntegerLiteral(t, p.Value, int64(expdVal))
+                case bool:
+                    testBooleanLiteral(t, p.Value, expdVal)
+                case string:
+                    testStringLiteral(t, p.Value, expdVal)
+                }
             }
 
-            switch expdValue := tst.expected[i].V.(type) {
-            case int:
-                testIntegerLiteral(t, p.Value, int64(expdValue))
-            case bool:
-                testBooleanLiteral(t, p.Value, expdValue)
-            case string:
-                testStringLiteral(t, p.Value, expdValue)
-            }
+        case Error:
+            parser, _:= runNewParser(t, tst.input)
+            assertError(t, parser, expdRes)
+
+        default:
+            t.Fatalf("Unhandled test case for type %T", expdRes)
         }
     }
 }
@@ -457,15 +477,14 @@ func TestBooleanExpression(t *testing.T) {
     testBooleanLiteral(t, stmt.Value, true)
 }
 
-func TestErrorCases(t *testing.T) {
+func TestMalformedSyntax(t *testing.T) {
     tests := []struct{
         input     string
-        expdError string
+        expdError Error
     }{
-        {"fn(){", EOFBeforeClosingBraceError},
-        {"fn(1 + 1){}", NonIdentifierParameterError},
-        {"1a", "illegal token: 1a"},
-        {"let a, a = 1, 2", "duplicate identifier in variable assignment: a"},
+        {"if a == b {", Error(EOFBeforeClosingBraceError)},
+        {"fn(){", Error(EOFBeforeClosingBraceError)},
+        {"1a", Error(IllegalTokenError + ": 1a")},
     }
 
     for _, tst := range tests {
@@ -561,13 +580,13 @@ func failOnError(t *testing.T, p *Parser) {
     t.FailNow()
 }
 
-func assertError(t *testing.T, p *Parser, msg string) {
+func assertError(t *testing.T, p *Parser, msg Error) {
     errors := p.Errors()
     if len(errors) == 0 {
         t.Fatalf("no error thrown for invalid syntax")
     }
 
-    assertMsg(t, errors[0], msg, "incorrect error message")
+    assertMsg(t, errors[0], string(msg), "incorrect error message")
 }
 
 func assert(t *testing.T, val, expected any) {
