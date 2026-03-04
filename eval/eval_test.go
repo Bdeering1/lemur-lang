@@ -1,6 +1,7 @@
 package eval
 
 import (
+    "fmt"
     "testing"
 
     "lemur/lexer"
@@ -197,14 +198,30 @@ func TestInvalidHashLiteral(t *testing.T) {
         input    string
         expected Error
     }{
-        {`{[]: 0}`, Error(TypeMismatchError + ": invalid key type (Array) for HashMap")},
-        {`{{}: 0}`, Error(TypeMismatchError + ": invalid key type (HashMap) for HashMap")},
-        {`{len: 0}`, Error(TypeMismatchError + ": invalid key type (Builtin) for HashMap")},
-        {`{fn(){}: 0}`, Error(TypeMismatchError + ": invalid key type (Function) for HashMap")},
-        {`{"one": 1, 2: 2}`, Error(TypeMismatchError + ": Integer key in HashMap keyed by String")},
-        {`{1: 1, "two": 2}`, Error(TypeMismatchError + ": String key in HashMap keyed by Integer")},
-        {`{"one": 1, "two": "2"}`, Error(TypeMismatchError + ": String value in HashMap with Integer values")},
-        {`{"one": "1", "two": 2}`, Error(TypeMismatchError + ": Integer value in HashMap with String values")},
+        {`{[]: 0}`, Error(fmt.Sprintf(
+            "%s: invalid key type (%s) for %s",
+            TypeMismatchError, object.ArrayType, object.HashMapType))},
+        {`{{}: 0}`, Error(fmt.Sprintf(
+            "%s: invalid key type (%s) for %s",
+            TypeMismatchError, object.HashMapType, object.HashMapType))},
+        {`{len: 0}`, Error(fmt.Sprintf(
+            "%s: invalid key type (%s) for %s",
+            TypeMismatchError, object.BuiltinType, object.HashMapType))},
+        {`{fn(){}: 0}`, Error(fmt.Sprintf(
+            "%s: invalid key type (%s) for %s",
+            TypeMismatchError, object.FunctionType, object.HashMapType))},
+        {`{"one": 1, 2: 2}`, Error(fmt.Sprintf(
+            "%s: %s key in %s keyed by %s",
+            TypeMismatchError, object.IntegerType, object.HashMapType, object.StringType))},
+        {`{1: 1, "two": 2}`, Error(fmt.Sprintf(
+            "%s: %s key in %s keyed by %s",
+            TypeMismatchError, object.StringType, object.HashMapType, object.IntegerType))},
+        {`{"one": 1, "two": "2"}`, Error(fmt.Sprintf(
+            "%s: %s value in %s with %s values",
+            TypeMismatchError, object.StringType, object.HashMapType, object.IntegerType))},
+        {`{"one": "1", "two": 2}`, Error(fmt.Sprintf(
+            "%s: %s value in %s with %s values",
+            TypeMismatchError, object.IntegerType, object.HashMapType, object.StringType))},
     }
 
     for i, tst := range tests {
@@ -223,8 +240,12 @@ func TestArrayLiteral(t *testing.T) {
         {"[1, 2]", []int{1, 2}},
         {"[true, false]", []bool{true, false}},
 
-        {"[1, true]", Error(TypeMismatchError + ": Boolean in fixed-type Array of Integer")},
-        {"[true, 1]", Error(TypeMismatchError + ": Integer in fixed-type Array of Boolean")},
+        {"[1, true]", Error(fmt.Sprintf(
+            "%s: %s in fixed-type %s of %s",
+            TypeMismatchError, object.BooleanType, object.ArrayType, object.IntegerType))},
+        {"[true, 1]", Error(fmt.Sprintf(
+            "%s: %s in fixed-type %s of %s",
+            TypeMismatchError, object.IntegerType, object.ArrayType, object.BooleanType))},
     }
 
     for i, tst := range tests {
@@ -274,17 +295,37 @@ func TestIndexExpression(t *testing.T) {
         {`"hello"[-1]`, Error(IndexOutOfBoundsError + ": -1")},
         {`"world"[5]`, Error(IndexOutOfBoundsError + ": 5")},
 
-        {"[1, 2][true]", Error(InvalidIndexExpressionError + ": cannot index Array with Boolean")},
-        {`[1, 2]["asdf"]`, Error(InvalidIndexExpressionError + ": cannot index Array with String")},
-        {`""[true]`, Error(InvalidIndexExpressionError + ": cannot index String with Boolean")},
-        {`""["asdf"]`, Error(InvalidIndexExpressionError + ": cannot index String with String")},
-        {`{}[[]]`, Error(InvalidIndexExpressionError + ": cannot index HashMap with Array")},
-        {`{}[{}]`, Error(InvalidIndexExpressionError + ": cannot index HashMap with HashMap")},
-        {`{}[len]`, Error(InvalidIndexExpressionError + ": cannot index HashMap with Builtin")},
-        {`{}[fn(){}]`, Error(InvalidIndexExpressionError + ": cannot index HashMap with Function")},
+        {"[1, 2][true]", Error(fmt.Sprintf(
+            "%s: cannot index %s with %s",
+            InvalidIndexExpressionError, object.ArrayType, object.BooleanType))},
+        {`[1, 2]["asdf"]`, Error(fmt.Sprintf(
+            "%s: cannot index %s with %s",
+            InvalidIndexExpressionError, object.ArrayType, object.StringType))},
+        {`""[true]`, Error(fmt.Sprintf(
+            "%s: cannot index %s with %s",
+            InvalidIndexExpressionError, object.StringType, object.BooleanType))},
+        {`""["asdf"]`, Error(fmt.Sprintf(
+            "%s: cannot index %s with %s",
+            InvalidIndexExpressionError, object.StringType, object.StringType))},
+        {`{}[[]]`, Error(fmt.Sprintf(
+            "%s: cannot index %s with %s",
+            InvalidIndexExpressionError, object.HashMapType, object.ArrayType))},
+        {`{}[{}]`, Error(fmt.Sprintf(
+            "%s: cannot index %s with %s",
+            InvalidIndexExpressionError, object.HashMapType, object.HashMapType))},
+        {`{}[len]`, Error(fmt.Sprintf(
+            "%s: cannot index %s with %s",
+            InvalidIndexExpressionError, object.HashMapType, object.BuiltinType))},
+        {`{}[fn(){}]`, Error(fmt.Sprintf(
+            "%s: cannot index %s with %s",
+            InvalidIndexExpressionError, object.HashMapType, object.FunctionType))},
 
-        {`{"one": 1}[1]`, Error(TypeMismatchError + ": Integer key in HashMap keyed by String")},
-        {`{1: "1"}["1"]`, Error(TypeMismatchError + ": String key in HashMap keyed by Integer")},
+        {`{"one": 1}[1]`, Error(fmt.Sprintf(
+            "%s: %s key in %s keyed by %s",
+            TypeMismatchError, object.IntegerType, object.HashMapType, object.StringType))},
+        {`{1: "1"}["1"]`, Error(fmt.Sprintf(
+            "%s: %s key in %s keyed by %s",
+            TypeMismatchError, object.StringType, object.HashMapType, object.IntegerType))},
     }
 
     for i, tst := range tests {
@@ -344,19 +385,43 @@ func TestArithmeticExpressions(t *testing.T) {
         {"5 * 2 + 10", 20},
         {"10 + 5 * 2", 20},
 
-        {"-true", Error(UnknownOperatorError + ": -Boolean")},
-        {"-true; 2", Error(UnknownOperatorError + ": -Boolean")},
-        {"true + true", Error(UnknownOperatorError + ": Boolean + Boolean")},
-        {"true + true; 2", Error(UnknownOperatorError + ": Boolean + Boolean")},
-        {`"foo" - "bar"`, Error(UnknownOperatorError + ": String - String")},
+        {"-true", Error(fmt.Sprintf(
+            "%s: -%s",
+            UnknownOperatorError, object.BooleanType))},
+        {"-true; 2", Error(fmt.Sprintf(
+            "%s: -%s",
+            UnknownOperatorError, object.BooleanType))},
+        {"true + true", Error(fmt.Sprintf(
+            "%s: %s + %s",
+            UnknownOperatorError, object.BooleanType, object.BooleanType))},
+        {"true + true; 2", Error(fmt.Sprintf(
+            "%s: %s + %s",
+            UnknownOperatorError, object.BooleanType, object.BooleanType))},
+        {`"foo" - "bar"`, Error(fmt.Sprintf(
+            "%s: %s - %s",
+            UnknownOperatorError, object.StringType, object.StringType))},
 
-        {"1 + true", Error(TypeMismatchError + ": Integer + Boolean")},
-        {"true + 1", Error(TypeMismatchError + ": Boolean + Integer")},
-        {"!(true + 1)", Error(TypeMismatchError + ": Boolean + Integer")},
-        {"(true + 1) * (5 + 5)", Error(TypeMismatchError + ": Boolean + Integer")},
-        {"if true + 1 { 2 }", Error(TypeMismatchError + ": Boolean + Integer")},
-        {"return true + 1", Error(TypeMismatchError + ": Boolean + Integer")},
-        {"1 + true; 2", Error(TypeMismatchError + ": Integer + Boolean")},
+        {"1 + true", Error(fmt.Sprintf(
+            "%s: %s + %s",
+            TypeMismatchError, object.IntegerType, object.BooleanType))},
+        {"true + 1", Error(fmt.Sprintf(
+            "%s: %s + %s",
+            TypeMismatchError, object.BooleanType, object.IntegerType))},
+        {"!(true + 1)", Error(fmt.Sprintf(
+            "%s: %s + %s",
+            TypeMismatchError, object.BooleanType, object.IntegerType))},
+        {"(true + 1) * (5 + 5)", Error(fmt.Sprintf(
+            "%s: %s + %s",
+            TypeMismatchError, object.BooleanType, object.IntegerType))},
+        {"if true + 1 { 2 }", Error(fmt.Sprintf(
+            "%s: %s + %s",
+            TypeMismatchError, object.BooleanType, object.IntegerType))},
+        {"return true + 1", Error(fmt.Sprintf(
+            "%s: %s + %s",
+            TypeMismatchError, object.BooleanType, object.IntegerType))},
+        {"1 + true; 2", Error(fmt.Sprintf(
+            "%s: %s + %s",
+            TypeMismatchError, object.IntegerType, object.BooleanType))},
     }
 
     for i, tst := range tests {
@@ -414,18 +479,38 @@ func TestLogicalExpressions(t *testing.T) {
         {"false || true", true},
         {"false || false", false},
 
-        {"!1", Error(UnknownOperatorError + ": !Integer")},
-        {"!1; 2", Error(UnknownOperatorError + ": !Integer")},
+        {"!1", Error(fmt.Sprintf(
+            "%s: !%s",
+            UnknownOperatorError, object.IntegerType))},
+        {"!1; 2", Error(fmt.Sprintf(
+            "%s: !%s",
+            UnknownOperatorError, object.IntegerType))},
 
-        {"1 && 0", Error(UnknownOperatorError + ": Integer && Integer")},
-        {`"a" && "b"`, Error(UnknownOperatorError + ": String && String")},
-        {"1 || 0", Error(UnknownOperatorError + ": Integer || Integer")},
-        {`"a" || "b"`, Error(UnknownOperatorError + ": String || String")},
+        {"1 && 0", Error(fmt.Sprintf(
+            "%s: %s && %s",
+            UnknownOperatorError, object.IntegerType, object.IntegerType))},
+        {`"a" && "b"`, Error(fmt.Sprintf(
+            "%s: %s && %s",
+            UnknownOperatorError, object.StringType, object.StringType))},
+        {"1 || 0", Error(fmt.Sprintf(
+            "%s: %s || %s",
+            UnknownOperatorError, object.IntegerType, object.IntegerType))},
+        {`"a" || "b"`, Error(fmt.Sprintf(
+            "%s: %s || %s",
+            UnknownOperatorError, object.StringType, object.StringType))},
 
-        {"true && 1", Error(TypeMismatchError + ": Boolean && Integer")},
-        {"0 && false", Error(TypeMismatchError + ": Integer && Boolean")},
-        {"true || 1", Error(TypeMismatchError + ": Boolean || Integer")},
-        {"0 || false", Error(TypeMismatchError + ": Integer || Boolean")},
+        {"true && 1", Error(fmt.Sprintf(
+            "%s: %s && %s",
+            TypeMismatchError, object.BooleanType, object.IntegerType))},
+        {"0 && false", Error(fmt.Sprintf(
+            "%s: %s && %s",
+            TypeMismatchError, object.IntegerType, object.BooleanType))},
+        {"true || 1", Error(fmt.Sprintf(
+            "%s: %s || %s",
+            TypeMismatchError, object.BooleanType, object.IntegerType))},
+        {"0 || false", Error(fmt.Sprintf(
+            "%s: %s || %s",
+            TypeMismatchError, object.IntegerType, object.BooleanType))},
     }
 
     for i, tst := range tests {
@@ -447,6 +532,7 @@ func TestOtherErrorCases(t *testing.T) {
         input    string
         expected Error
     }{
+        {"x", Error(IdentifierNotFoundError + ": x")},
         {"x", Error(IdentifierNotFoundError + ": x")},
         {"!x", Error(IdentifierNotFoundError + ": x")},
         {"if x { y }", Error(IdentifierNotFoundError + ": x")},
