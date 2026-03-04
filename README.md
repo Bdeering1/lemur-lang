@@ -17,7 +17,8 @@ The language currently supports the following features:
 Syntax sample:
 ```ruby
 let double = fn(col) {
-    iter(col), fn(x){ x * 2 }
+    col
+    |> iter, fn(x){ x * 2 }
     |> map
     |> collect
 }
