@@ -293,14 +293,16 @@ type CallExp struct { Name Ident; Arguments []any }
 func TestPipeOperator(t *testing.T) {
     tests := []struct{
         input     string
+        isTuple  bool
         expdIdent Ident
         expdArgs  any
     }{
-        {"1 |> f", "f", []any{ 1 }},
-        {"true |> f", "f", []any{ true }},
-        {"a |> f", "f", []any{ "a" }},
-        {"a, b |> f", "f", []any{ "a", "b" }},
-        {"1 |> f1 |> f2", "f2", CallExp{ Name: "f1", Arguments: []any{ 1 } }},
+        {"1 |> f",        false, "f",  []any{ 1 }},
+        {"true |> f",     false, "f",  []any{ true }},
+        {"a |> f",        false, "f",  []any{ "a" }},
+        {"a, b |> f",     false, "f",  []any{ "a", "b" }},
+        {"a |> f, b",     true,  "f",  []any{ "a" }},
+        {"1 |> f1 |> f2", false, "f2", CallExp{ "f1", []any{ 1 } }},
     }
 
     for _, tst := range tests {
@@ -308,7 +310,14 @@ func TestPipeOperator(t *testing.T) {
         failOnError(t, parser)
 
         stmt := assertCast[*ast.ExpressionStatement](t, program[0])
-        exp := assertCast[*ast.CallExpression](t, stmt.Value)
+
+        firstExp := stmt.Value
+        if tst.isTuple {
+            t := assertCast[ast.TupleExpression](t, firstExp)
+            firstExp = t[0]
+        }
+
+        exp := assertCast[*ast.CallExpression](t, firstExp)
         testIdentifier(t, exp.Function, tst.expdIdent)
 
         switch expd := tst.expdArgs.(type) {

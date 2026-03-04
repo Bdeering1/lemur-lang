@@ -107,7 +107,7 @@ func TestFunctionExpression(t *testing.T) {
 func TestCallExpression(t *testing.T) {
     tests := []struct{
         input    string
-        expected int
+        expected any
     }{
         {"let identity = fn(x) { x }; identity(5)", 5},
         {"let identity = fn(x) { return x }; identity(5)", 5},
@@ -115,13 +115,25 @@ func TestCallExpression(t *testing.T) {
         {"let add = fn(x, y) { x + y }; add(2, 3)", 5},
         {"let max = fn(x, y) { if x > y { x } else { y } }; max(1, 5)", 5},
         {"let fact = fn(n) { if n == 0 { 1 } else { n * fact(n-1) } }; fact(3)", 6},
+
+        {"1 |> fn(x){ x * 2 }", 2},
+        {"2, 3 |> fn(x, y){ x + y }", 5},
+        {"1 |> fn(x){ x }, 2", []int{1, 2}},
     }
 
     for i, tst := range tests {
         obj := runNewEval(tst.input)
 
-        res := assertCast[object.Integer](t, i, obj)
-        assert(t, i, res, object.Integer(tst.expected))
+        switch expd := tst.expected.(type) {
+        case int:
+            res := assertCast[object.Integer](t, i, obj)
+            assert(t, i, res, object.Integer(expd))
+        case []int:
+            res := assertCast[object.Tuple](t, i, obj)
+            for idx, o := range res {
+                assert(t, i, o, object.Integer(expd[idx]))
+            }
+        }
     }
 }
 

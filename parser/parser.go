@@ -406,17 +406,27 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 
 func (p *Parser) parsePipeExpression(left ast.Expression) ast.Expression {
     p.readToken()
-    exp := &ast.CallExpression{Token: p.curToken}
 
-    exp.Function = p.parseExpression(Pipe)
+    callExp := &ast.CallExpression{Token: p.curToken}
+    exp := p.parseExpression(Pipe)
 
-    t, ok := left.(ast.TupleExpression)
-    if !ok {
-        exp.Arguments = []ast.Expression{ left }
+    t, ok := exp.(ast.TupleExpression)
+
+    callExp.Function = exp
+    exp = callExp
+    if ok {
+        callExp.Function = t[0]
+        t[0] = callExp
+        exp = t
+    }
+
+    t, ok = left.(ast.TupleExpression)
+    if ok {
+        callExp.Arguments = []ast.Expression(t)
         return exp
     }
 
-    exp.Arguments = []ast.Expression(t)
+    callExp.Arguments = []ast.Expression{ left }
     return exp
 }
 
